@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Extensions;
+namespace Tipbr\RestfulToolkit\Extensions;
 
-use App\Api\Services\SharingService;
+use Tipbr\RestfulToolkit\Services\SharingService;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;

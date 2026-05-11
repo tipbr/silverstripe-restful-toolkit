@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Traits;
+namespace Tipbr\RestfulToolkit\Traits;
 
-use App\Api\Services\JwtService;
+use Tipbr\RestfulToolkit\Services\JwtService;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Security\Member;

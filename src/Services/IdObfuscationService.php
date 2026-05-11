@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Services;
+namespace Tipbr\RestfulToolkit\Services;
 
-use App\Api\Models\ApiPublicId;
+use Tipbr\RestfulToolkit\Models\ApiPublicId;
 use Ramsey\Uuid\Uuid;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\ORM\DataObject;

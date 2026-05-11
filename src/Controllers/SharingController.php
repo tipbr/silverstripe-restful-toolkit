@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Controllers;
+namespace Tipbr\RestfulToolkit\Controllers;
 
-use App\Api\Extensions\ShareableObjectExtension;
-use App\Api\Models\ObjectShare;
-use App\Api\Services\IdObfuscationService;
-use App\Api\Services\SharingService;
-use App\Api\Traits\RequiresJwtAuth;
+use Tipbr\RestfulToolkit\Extensions\ShareableObjectExtension;
+use Tipbr\RestfulToolkit\Models\ObjectShare;
+use Tipbr\RestfulToolkit\Services\IdObfuscationService;
+use Tipbr\RestfulToolkit\Services\SharingService;
+use Tipbr\RestfulToolkit\Traits\RequiresJwtAuth;
 use RuntimeException;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;

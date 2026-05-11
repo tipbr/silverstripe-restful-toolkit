@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Services;
+namespace Tipbr\RestfulToolkit\Services;
 
-use App\Api\Models\ApiSession;
+use Tipbr\RestfulToolkit\Models\ApiSession;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Ramsey\Uuid\Uuid;

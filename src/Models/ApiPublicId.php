@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Models;
+namespace Tipbr\RestfulToolkit\Models;
 
 use SilverStripe\ORM\DataObject;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Services;
+namespace Tipbr\RestfulToolkit\Services;
 
-use App\Api\Extensions\ShareableObjectExtension;
-use App\Api\Models\ObjectShare;
+use Tipbr\RestfulToolkit\Extensions\ShareableObjectExtension;
+use Tipbr\RestfulToolkit\Models\ObjectShare;
 use RuntimeException;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;

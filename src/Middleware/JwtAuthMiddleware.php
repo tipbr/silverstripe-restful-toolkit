@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Middleware;
+namespace Tipbr\RestfulToolkit\Middleware;
 
-use App\Api\Services\JwtService;
+use Tipbr\RestfulToolkit\Services\JwtService;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\Middleware\HTTPMiddleware;

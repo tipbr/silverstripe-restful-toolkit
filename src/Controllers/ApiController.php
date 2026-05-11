@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Controllers;
+namespace Tipbr\RestfulToolkit\Controllers;
 
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPResponse;
