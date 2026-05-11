@@ -8,6 +8,7 @@ use App\Api\Extensions\ShareableObjectExtension;
 use App\Api\Models\ObjectShare;
 use RuntimeException;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Member;
@@ -33,6 +34,7 @@ class SharingService
     private static array $resources = [];
 
     private static string $default_resource_namespace = 'App\\Model\\';
+    private ?IdObfuscationService $idObfuscation = null;
 
     public function resolveClassFromResource(string $resource): ?string
     {
@@ -230,20 +232,31 @@ class SharingService
      */
     public function serializeShare(ObjectShare $share): array
     {
+        $idObfuscation = $this->getIdObfuscation();
+
         return [
-            'id' => (int)$share->ID,
+            'id' => $idObfuscation->encode(ObjectShare::class, (int)$share->ID),
             'shared_object_class' => (string)$share->SharedObjectClass,
-            'shared_object_id' => (int)$share->SharedObjectID,
+            'shared_object_id' => $idObfuscation->encode((string)$share->SharedObjectClass, (int)$share->SharedObjectID),
             'permission' => (string)$share->PermissionLevel,
             'status' => (string)$share->Status,
-            'invited_by_id' => (int)$share->InvitedByID,
-            'shared_with_id' => (int)$share->SharedWithID,
+            'invited_by_id' => $idObfuscation->encode(Member::class, (int)$share->InvitedByID),
+            'shared_with_id' => $idObfuscation->encode(Member::class, (int)$share->SharedWithID),
             'invite_message' => (string)$share->InviteMessage,
             'decline_reason' => (string)$share->DeclineReason,
             'expires_at' => (string)$share->ExpiresAt,
             'responded_at' => (string)$share->RespondedAt,
             'created' => (string)$share->Created,
         ];
+    }
+
+    private function getIdObfuscation(): IdObfuscationService
+    {
+        if ($this->idObfuscation === null) {
+            $this->idObfuscation = Injector::inst()->get(IdObfuscationService::class);
+        }
+
+        return $this->idObfuscation;
     }
 
     private function assertShareable(DataObject $object): void

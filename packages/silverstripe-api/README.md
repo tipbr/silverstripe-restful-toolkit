@@ -31,6 +31,10 @@ App\Api\Services\JwtService:
   refresh_token_expiry: 2592000
   rotate_refresh_tokens: true
 
+App\Api\Services\IdObfuscationService:
+  enabled: false
+  uuid_type: v4
+
 App\Api\Services\SharingService:
   default_share_expiry: 604800
   block_reinvite_after_decline: true
@@ -64,6 +68,7 @@ If `allowed_origins` is omitted or empty, CORS headers are not added (all cross-
 ## CRUD Scaffolding
 
 Expose resources under `/api/v1/{resource}` and `/api/v1/{resource}/{id}`.
+When `App\Api\Services\IdObfuscationService.enabled` is true, API IDs are UUIDs (configured by `uuid_type`) instead of incremental DB integers.
 
 By default, the CRUD controller resolves resource names to `App\Model\{StudlyCaseResource}` and only serializes:
 

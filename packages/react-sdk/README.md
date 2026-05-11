@@ -30,6 +30,11 @@ export const App = () => (
     baseUrl="https://api.example.com"
     queryClient={queryClient}
     authMode="jwt"
+    idMapping={{
+      enabled: true,
+      shortIds: true,
+      shortIdLength: 8,
+    }}
     onAuthFailure={() => {
       // e.g. redirect to login route
     }}
@@ -54,6 +59,16 @@ If your backend uses Silverstripe cookie/session auth (instead of JWT access tok
 ```
 
 This mode sends cookies (`withCredentials`) and disables token refresh flow. `useIsAuthenticated` checks `/api/v1/auth/me` to determine session state.
+
+## ID Mapping Options
+
+The provider supports optional ID mapping for obfuscated backend IDs:
+
+- `idMapping.enabled` (default `false`) enables client-side ID mapping support
+- `idMapping.shortIds` (default `false`) shortens UUID IDs in hook results/query keys
+- `idMapping.shortIdLength` (default `8`) controls generated short ID length
+
+When enabled, hooks convert short IDs back to full UUIDs before API requests.
 
 ## Login Example (JWT mode)
 
@@ -83,7 +98,7 @@ const LoginButton = () => {
 ```tsx
 import { createCrudHooks } from 'react-silverstripe-sdk';
 
-type Todo = { ID: number; Title: string; Body: string };
+type Todo = { ID: string | number; Title: string; Body: string };
 
 const todoHooks = createCrudHooks<Todo>('/todos');
 

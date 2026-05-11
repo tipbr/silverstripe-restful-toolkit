@@ -15,6 +15,12 @@ App\Api\Services\JwtService:
   # When true, /auth/refresh issues a new refresh token value
   rotate_refresh_tokens: true
 
+App\Api\Services\IdObfuscationService:
+  # When true, API-exposed IDs are UUIDs mapped from internal incremental IDs
+  enabled: false
+  # Supported: v1, v4, v6, v7
+  uuid_type: v4
+
 App\Api\Services\SharingService:
   # Default invitation expiration (seconds)
   default_share_expiry: 604800

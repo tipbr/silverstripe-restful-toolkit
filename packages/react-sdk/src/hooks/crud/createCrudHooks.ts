@@ -10,9 +10,8 @@ import {
 } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { getApiClient } from '../../client';
-import type { ApiError, PaginatedQueryParams, PaginatedResponse } from '../../types';
-
-type Identifier = number | string;
+import { useApiConfig } from '../../provider';
+import type { ApiError, Identifier, PaginatedQueryParams, PaginatedResponse } from '../../types';
 type CreatePayload<T> = Partial<T>;
 
 type UpdatePayload<T> = {
@@ -56,40 +55,47 @@ export const createCrudHooks = <T>(resourcePath: string) => {
   const useList = (
     params?: PaginatedQueryParams,
     options?: Omit<UseQueryOptions<PaginatedResponse<T>, AxiosError<ApiError>>, 'queryKey' | 'queryFn'>,
-  ): UseQueryResult<PaginatedResponse<T>, AxiosError<ApiError>> =>
-    useQuery<PaginatedResponse<T>, AxiosError<ApiError>>({
+  ): UseQueryResult<PaginatedResponse<T>, AxiosError<ApiError>> => {
+    const { idMapper } = useApiConfig();
+
+    return useQuery<PaginatedResponse<T>, AxiosError<ApiError>>({
       queryKey: [...listKey, params] as QueryKey,
       queryFn: async () => {
         const response = await getApiClient().get<PaginatedResponse<T>>(endpoint, {
           params: toQueryParams(params),
         });
-        return response.data;
+        return idMapper.mapValueForClient(response.data);
       },
       ...options,
     });
+  };
 
   const useGet = (
     id: Identifier,
     options?: Omit<UseQueryOptions<T, AxiosError<ApiError>>, 'queryKey' | 'queryFn'>,
-  ): UseQueryResult<T, AxiosError<ApiError>> =>
-    useQuery<T, AxiosError<ApiError>>({
-      queryKey: [...listKey, id] as QueryKey,
+  ): UseQueryResult<T, AxiosError<ApiError>> => {
+    const { idMapper } = useApiConfig();
+
+    return useQuery<T, AxiosError<ApiError>>({
+      queryKey: [...listKey, idMapper.toClientId(id)] as QueryKey,
       queryFn: async () => {
-        const response = await getApiClient().get<{ data: T }>(`${endpoint}/${id}`);
-        return response.data.data;
+        const response = await getApiClient().get<{ data: T }>(`${endpoint}/${idMapper.toApiId(id)}`);
+        return idMapper.mapValueForClient(response.data.data);
       },
       ...options,
     });
+  };
 
   const useCreate = (
     options?: UseMutationOptions<T, AxiosError<ApiError>, CreatePayload<T>>,
   ): UseMutationResult<T, AxiosError<ApiError>, CreatePayload<T>> => {
     const queryClient = useQueryClient();
+    const { idMapper } = useApiConfig();
 
     return useMutation<T, AxiosError<ApiError>, CreatePayload<T>>({
       mutationFn: async (payload) => {
         const response = await getApiClient().post<{ data: T }>(endpoint, payload);
-        return response.data.data;
+        return idMapper.mapValueForClient(response.data.data);
       },
       ...options,
       onSuccess: async (data, variables, onMutateResult, context) => {
@@ -103,11 +109,12 @@ export const createCrudHooks = <T>(resourcePath: string) => {
     options?: UseMutationOptions<T, AxiosError<ApiError>, UpdatePayload<T>>,
   ): UseMutationResult<T, AxiosError<ApiError>, UpdatePayload<T>> => {
     const queryClient = useQueryClient();
+    const { idMapper } = useApiConfig();
 
     return useMutation<T, AxiosError<ApiError>, UpdatePayload<T>>({
       mutationFn: async ({ id, data }) => {
-        const response = await getApiClient().put<{ data: T }>(`${endpoint}/${id}`, data);
-        return response.data.data;
+        const response = await getApiClient().put<{ data: T }>(`${endpoint}/${idMapper.toApiId(id)}`, data);
+        return idMapper.mapValueForClient(response.data.data);
       },
       ...options,
       onSuccess: async (data, variables, onMutateResult, context) => {
@@ -121,10 +128,11 @@ export const createCrudHooks = <T>(resourcePath: string) => {
     options?: UseMutationOptions<void, AxiosError<ApiError>, Identifier>,
   ): UseMutationResult<void, AxiosError<ApiError>, Identifier> => {
     const queryClient = useQueryClient();
+    const { idMapper } = useApiConfig();
 
     return useMutation<void, AxiosError<ApiError>, Identifier>({
       mutationFn: async (id) => {
-        await getApiClient().delete(`${endpoint}/${id}`);
+        await getApiClient().delete(`${endpoint}/${idMapper.toApiId(id)}`);
       },
       ...options,
       onSuccess: async (data, variables, onMutateResult, context) => {

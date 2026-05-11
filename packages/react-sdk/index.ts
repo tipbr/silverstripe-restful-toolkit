@@ -16,4 +16,5 @@ export { useDeleteSession } from './src/hooks/auth/useDeleteSession';
 export { useIsAuthenticated } from './src/hooks/auth/useIsAuthenticated';
 
 export type { TokenStorage } from './src/storage';
+export type { IdMappingConfig } from './src/idMapping';
 export * from './src/types';

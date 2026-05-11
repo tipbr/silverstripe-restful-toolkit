@@ -67,14 +67,14 @@ export const setAuthTokens = async (storage: TokenStorage, tokens: Partial<AuthT
     await storage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
   }
 
-  if (typeof tokens.session_id === 'number') {
-    await storage.setItem(SESSION_ID_KEY, tokens.session_id.toString());
+  if (typeof tokens.session_id === 'string' || typeof tokens.session_id === 'number') {
+    await storage.setItem(SESSION_ID_KEY, String(tokens.session_id));
   }
 };
 
 export const getAuthTokens = async (
   storage: TokenStorage,
-): Promise<{ access_token: string | null; refresh_token: string | null; session_id: number | null }> => {
+): Promise<{ access_token: string | null; refresh_token: string | null; session_id: string | null }> => {
   const [accessToken, refreshToken, sessionIdRaw] = await Promise.all([
     storage.getItem(ACCESS_TOKEN_KEY),
     storage.getItem(REFRESH_TOKEN_KEY),
@@ -84,7 +84,7 @@ export const getAuthTokens = async (
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
-    session_id: sessionIdRaw ? Number(sessionIdRaw) : null,
+    session_id: sessionIdRaw ? sessionIdRaw : null,
   };
 };
 
