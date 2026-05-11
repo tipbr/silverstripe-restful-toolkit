@@ -6,8 +6,7 @@
   "require": {
     "php": "^8.3",
     "silverstripe/framework": "^6",
-    "silverstripe/security": "^6",
-    "firebase/php-jwt": "^6.10",
+    "firebase/php-jwt": "^7.0",
     "ramsey/uuid": "^4.9"
   },
   "autoload": {
