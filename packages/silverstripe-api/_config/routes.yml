@@ -7,6 +7,8 @@ SilverStripe\Control\Director:
   rules:
     'api/v1/auth/register': 'App\\Api\\Controllers\\AuthController/register'
     'api/v1/auth/login': 'App\\Api\\Controllers\\AuthController/login'
+    'api/v1/auth/checkemail': 'App\\Api\\Controllers\\AuthController/checkEmail'
+    'api/v1/auth/checkpassword': 'App\\Api\\Controllers\\AuthController/checkPassword'
     'api/v1/auth/refresh': 'App\\Api\\Controllers\\AuthController/refresh'
     'api/v1/auth/logout': 'App\\Api\\Controllers\\AuthController/logout'
     'api/v1/auth/logout-all': 'App\\Api\\Controllers\\AuthController/logoutAll'

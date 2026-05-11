@@ -13,7 +13,9 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DB;
+use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
+use SilverStripe\Security\PasswordValidator;
 
 class AuthController extends ApiController
 {
@@ -24,6 +26,8 @@ class AuthController extends ApiController
     private static array $allowed_actions = [
         'register',
         'login',
+        'checkEmail',
+        'checkPassword',
         'refresh',
         'logout',
         'logoutAll',
@@ -63,8 +67,9 @@ class AuthController extends ApiController
         $member->Email = $email;
         $member->FirstName = trim((string)$data['first_name']);
         $member->Surname = trim((string)$data['last_name']);
-        if (!$this->isPasswordStrong((string)$data['password'])) {
-            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password']);
+        if (!$passwordValidation->isValid()) {
+            return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
         $member->changePassword((string)$data['password']);
         $member->write();
@@ -146,6 +151,53 @@ class AuthController extends ApiController
         }
 
         return $this->apiResponse($response);
+    }
+
+    public function checkEmail(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['email'], $data);
+
+        $email = strtolower(trim((string)$data['email']));
+        $formatValid = filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+
+        $mxValid = false;
+        if ($formatValid) {
+            $domain = (string)substr(strrchr($email, '@') ?: '', 1);
+            if ($domain !== '') {
+                $mxValid = function_exists('checkdnsrr') && checkdnsrr($domain, 'MX');
+            }
+        }
+
+        return $this->apiResponse([
+            'email' => $email,
+            'format_valid' => $formatValid,
+            'mx_valid' => $mxValid,
+            'valid' => $formatValid && $mxValid,
+        ]);
+    }
+
+    public function checkPassword(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['password'], $data);
+
+        $password = (string)$data['password'];
+        $validation = $this->validatePasswordAgainstPolicy($password);
+
+        return $this->apiResponse([
+            'valid' => $validation->isValid(),
+            'errors' => $this->getValidationMessages($validation),
+            'strength' => $this->getPasswordStrength($password),
+        ]);
     }
 
     public function logout(HTTPRequest $request): HTTPResponse
@@ -263,8 +315,9 @@ class AuthController extends ApiController
             return $this->apiError('Invalid reset token', 400);
         }
 
-        if (!$this->isPasswordStrong((string)$data['password'])) {
-            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password']);
+        if (!$passwordValidation->isValid()) {
+            return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
         $member->changePassword((string)$data['password']);
         $member->write();
@@ -288,8 +341,9 @@ class AuthController extends ApiController
             return $this->apiError('Current password is incorrect', 400);
         }
 
-        if (!$this->isPasswordStrong((string)$data['new_password'])) {
-            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['new_password']);
+        if (!$passwordValidation->isValid()) {
+            return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
         $member->changePassword((string)$data['new_password']);
         $member->write();
@@ -343,6 +397,123 @@ class AuthController extends ApiController
     private function isPasswordStrong(string $password): bool
     {
         return mb_strlen($password) >= $this->getMinPasswordLength();
+    }
+
+    private function validatePasswordAgainstPolicy(string $password): ValidationResult
+    {
+        $validator = null;
+
+        if (method_exists(Member::class, 'password_validator')) {
+            $candidate = Member::password_validator();
+            if ($candidate instanceof PasswordValidator) {
+                $validator = $candidate;
+            }
+        }
+
+        if (!$validator) {
+            try {
+                $candidate = Injector::inst()->get(PasswordValidator::class);
+                if ($candidate instanceof PasswordValidator) {
+                    $validator = $candidate;
+                }
+            } catch (\Throwable) {
+                // Fall back to minimum-length policy below.
+            }
+        }
+
+        if ($validator) {
+            return $validator->validate($password, null);
+        }
+
+        $fallback = ValidationResult::create();
+        if (!$this->isPasswordStrong($password)) {
+            $fallback->addError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()));
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getValidationMessages(ValidationResult $validation): array
+    {
+        $messages = [];
+        foreach ($validation->getMessages() as $message) {
+            if (is_string($message)) {
+                $messages[] = trim($message);
+                continue;
+            }
+
+            if (is_array($message) && isset($message['message']) && is_string($message['message'])) {
+                $messages[] = trim($message['message']);
+                continue;
+            }
+
+            if (is_object($message) && method_exists($message, 'getMessage')) {
+                $value = $message->getMessage();
+                if (is_string($value)) {
+                    $messages[] = trim($value);
+                }
+            }
+        }
+
+        $messages = array_values(array_filter(array_unique($messages), static fn (string $value): bool => $value !== ''));
+
+        if ($messages === [] && !$validation->isValid()) {
+            $messages[] = sprintf('Password must be at least %d characters', $this->getMinPasswordLength());
+        }
+
+        return $messages;
+    }
+
+    private function getPrimaryValidationMessage(ValidationResult $validation): string
+    {
+        $messages = $this->getValidationMessages($validation);
+        if ($messages === []) {
+            return 'Password is invalid';
+        }
+
+        return $messages[0];
+    }
+
+    /**
+     * @return array{score:int,label:string}
+     */
+    private function getPasswordStrength(string $password): array
+    {
+        $length = mb_strlen($password);
+        $hasLower = preg_match('/[a-z]/', $password) === 1;
+        $hasUpper = preg_match('/[A-Z]/', $password) === 1;
+        $hasDigit = preg_match('/\d/', $password) === 1;
+        $hasSymbol = preg_match('/[^a-zA-Z\d]/', $password) === 1;
+        $characterSets = ($hasLower ? 1 : 0) + ($hasUpper ? 1 : 0) + ($hasDigit ? 1 : 0) + ($hasSymbol ? 1 : 0);
+
+        $score = 0;
+        if ($length >= 8) {
+            $score++;
+        }
+        if ($length >= 12) {
+            $score++;
+        }
+        if ($characterSets >= 3) {
+            $score++;
+        }
+        if ($characterSets === 4 && $length >= 14) {
+            $score++;
+        }
+
+        $label = 'weak';
+        if ($score >= 3) {
+            $label = 'strong';
+        } elseif ($score >= 2) {
+            $label = 'medium';
+        }
+
+        return [
+            'score' => $score,
+            'label' => $label,
+        ];
     }
 
     private function getMinPasswordLength(): int

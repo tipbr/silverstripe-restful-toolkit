@@ -97,6 +97,8 @@ All endpoints are under `/api/v1/auth/`.
 
 - `POST /register`
 - `POST /login`
+- `POST /checkemail`
+- `POST /checkpassword`
 - `POST /refresh`
 - `POST /logout`
 - `POST /logout-all`
