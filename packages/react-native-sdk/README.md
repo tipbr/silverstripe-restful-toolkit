@@ -92,9 +92,9 @@ export const EmailInput = () => {
 // checkEmail.data?.mx_checked — whether MX lookup was performed
 ```
 
-## Password Strength (debounced)
+## Password Strength (debounce recommended)
 
-`useCheckPassword` calls `POST /api/v1/auth/checkpassword` and validates the password against the server-side policy while returning a strength score.
+`useCheckPassword` calls `POST /api/v1/auth/checkpassword` and validates the password against the server-side policy while returning a strength score. Fire it on every change event with a short debounce (e.g. 300 ms) to avoid unnecessary network requests.
 
 ```tsx
 import React from 'react';

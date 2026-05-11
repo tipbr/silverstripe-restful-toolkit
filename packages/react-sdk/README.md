@@ -116,9 +116,9 @@ const EmailField = () => {
 // checkEmail.data?.mx_checked — whether MX lookup was performed
 ```
 
-## Password Strength (onKeyUp / debounced)
+## Password Strength (debounce recommended)
 
-`useCheckPassword` calls `POST /api/v1/auth/checkpassword` and validates the password against the server-side policy while also returning a strength score.
+`useCheckPassword` calls `POST /api/v1/auth/checkpassword` and validates the password against the server-side policy while also returning a strength score. Fire it on every keystroke with a short debounce (e.g. 300 ms) to avoid unnecessary network requests.
 
 ```tsx
 import { useCheckPassword } from 'react-silverstripe-sdk';
