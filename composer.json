@@ -1,5 +1,5 @@
 {
-  "name": "app/silverstripe-api",
+  "name": "tipbr/silverstripe-restful-toolkit",
   "description": "Silverstripe 6 API scaffolding helpers with JWT authentication",
   "type": "silverstripe-vendormodule",
   "license": "MIT",

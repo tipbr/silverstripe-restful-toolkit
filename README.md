@@ -1,55 +1,235 @@
 # silverstripe-restful-toolkit
 
-Monorepo containing three packages:
+A reusable Silverstripe 6 module that provides:
 
-- `packages/silverstripe-api` — Silverstripe 6 module for CRUD API scaffolding + JWT auth
-- `packages/react-native-sdk` — TypeScript React Native SDK for consuming the API
-- `packages/react-sdk` — TypeScript React SDK for SPAs and browser clients
+- CRUD API scaffolding for `DataObject` classes
+- JWT access token authentication
+- Refresh-token sessions backed by `ApiSession`
+- Auth endpoints for registration, login, profile, sessions, and password flows
+- Configurable object-sharing invitations with read/write permissions
 
-## Packages
+## Installation
 
-### 1) silverstripe-api
+```bash
+composer require tipbr/silverstripe-restful-toolkit
+```
 
-A Composer-installable module that provides:
+Requirements:
 
-- Base API controller helpers (`apiResponse`, pagination, body parsing, required-field validation)
-- CRUD scaffolding controller with DataObject permission checks
-- CORS middleware
-- JWT access-token middleware and auth helpers
-- Full auth controller endpoints with refresh sessions in DB
+- PHP 8.2+
+- Silverstripe Framework 6+
+- `firebase/php-jwt`
 
-See: [`packages/silverstripe-api/README.md`](packages/silverstripe-api/README.md)
+## Configuration
 
-### 2) react-native-sdk
+Configure values in YAML (for example in your host app):
 
-A strict TypeScript SDK that provides:
+```yml
+App\Api\Services\JwtService:
+  secret: '`SS_JWT_SECRET`'
+  access_token_expiry: 900
+  refresh_token_expiry: 2592000
+  rotate_refresh_tokens: true
 
-- API provider + React Query integration
-- Typed token storage abstraction
-- Axios auth + refresh interceptors
-- Auth hooks and generic CRUD hooks factory
+App\Api\Services\IdObfuscationService:
+  enabled: false
+  uuid_type: v4
 
-See: [`packages/react-native-sdk/README.md`](packages/react-native-sdk/README.md)
+App\Api\Controllers\ApiController:
+  max_page_size: 100
 
-### 3) react-sdk
+App\Api\Controllers\AuthController:
+  min_password_length: 8
 
-A strict TypeScript SDK for browser-based React apps that provides:
+App\Api\Services\SharingService:
+  default_share_expiry: 604800
+  block_reinvite_after_decline: true
+  allow_self_invite: false
+  allowed_permissions:
+    - read
+    - write
+  default_permission: read
+  resources:
+    posts: App\Model\Post
+  default_resource_namespace: 'App\\Model\\'
 
-- API provider + React Query integration
-- Browser token storage abstraction (with injectable custom storage)
-- Axios auth/refresh interceptors
-- Optional session-cookie auth mode for Silverstripe session-based auth
-- Auth hooks and generic CRUD hooks factory
+App\Api\Middleware\CorsMiddleware:
+  allowed_origins:
+    - 'http://localhost:8081'
 
-See: [`packages/react-sdk/README.md`](packages/react-sdk/README.md)
+App\Api\Controllers\CrudApiController:
+  resources:
+    posts: App\Model\Post
+    comments: App\Model\Comment
 
-## Repository Strategy
+App\Model\Post:
+  extensions:
+    - App\Api\Extensions\ShareableObjectExtension
+  share_owner_field: OwnerID
+```
 
-This monorepo is structured to support an eventual split into separate repositories while keeping APIs aligned during initial co-development.
+Security note: avoid `'*'` in production `allowed_origins` unless the API is intentionally public for all origins.
+If `allowed_origins` is omitted or empty, CORS headers are not added (all cross-origin browser requests are effectively blocked).
 
-Proposed split plan:
+## CRUD Scaffolding
 
-1. Extract `packages/silverstripe-api` to its own repository and publish as a Composer package.
-2. Extract `packages/react-native-sdk` to its own repository and publish to npm.
-3. Extract `packages/react-sdk` to its own repository and publish to npm.
-4. Keep shared contract compatibility via versioned API docs and CI contract tests.
+Expose resources under `/api/v1/{resource}` and `/api/v1/{resource}/{id}`.
+When `App\Api\Services\IdObfuscationService.enabled` is true, API IDs are UUIDs (configured by `uuid_type`) instead of incremental DB integers.
+
+By default, the CRUD controller resolves resource names to `App\Model\{StudlyCaseResource}` and only serializes:
+
+1. `private static array $api_fields` if defined on the `DataObject`
+2. otherwise, `db` fields only
+
+```php
+private static array $api_fields = [
+    'Title',
+    'Body',
+    'Created',
+];
+```
+
+### Restricting writable fields
+
+By default the same fields that are serialized in GET responses (`api_fields`) are also accepted on
+POST / PUT / PATCH. If you want to expose read-only fields (e.g. `Slug`, `Created`) in responses
+without allowing clients to set them, define `api_write_fields` on the DataObject:
+
+```php
+private static array $api_fields = [
+    'Title',
+    'Body',
+    'Slug',    // returned on reads …
+    'Created', // … but not writable
+];
+
+private static array $api_write_fields = [
+    'Title',
+    'Body',    // only these fields are accepted on POST/PUT/PATCH
+];
+```
+
+When `api_write_fields` is absent, write access falls back to `api_fields` (existing behaviour).
+
+Permissions are enforced with `canView`, `canCreate`, `canEdit`, and `canDelete`.
+
+## Rate Limiting
+
+Silverstripe Framework ships with `SilverStripe\Control\Middleware\RateLimitMiddleware`.
+Apply it to sensitive endpoints (login, register, forgot-password, refresh) in your host app's
+`_config/middleware.yml`:
+
+```yml
+SilverStripe\Control\Director:
+  middlewares:
+    AuthRateLimit: '%$SilverStripe\Control\Middleware\RateLimitMiddleware'
+
+SilverStripe\Control\Middleware\RateLimitMiddleware:
+  max_attempts: 10
+  decay_seconds: 60
+  urls:
+    - 'api/v1/auth/login'
+    - 'api/v1/auth/register'
+    - 'api/v1/auth/refresh'
+    - 'api/v1/auth/forgot-password'
+```
+
+Adjust `max_attempts` and `decay_seconds` to suit your threat model.
+
+
+## Auth Endpoints
+
+All endpoints are under `/api/v1/auth/`.
+
+- `POST /register` — create account (`email`, `password`, `first_name`, `last_name`, optional `device_name`)
+- `POST /login` — authenticate (`email`, `password`, optional `device_name`)
+- `POST /checkemail` — pre-validate an email address (format + MX lookup); safe to call unauthenticated
+- `POST /checkpassword` — pre-validate a password against server policy and return strength metadata; safe to call unauthenticated
+- `POST /refresh` — exchange a refresh token for a new access token
+- `POST /logout` — revoke a specific session (`session_id`)
+- `POST /logout-all` — revoke all sessions for the authenticated member
+- `GET /sessions` — list active sessions for the authenticated member
+- `DELETE /sessions/:id` — revoke a session by ID
+- `POST /forgot-password` — send a password-reset email (`email`)
+- `POST /reset-password` — set a new password via reset token (`token`, `email`, `password`)
+- `POST /change-password` — change password for the authenticated member (`current_password`, `new_password`)
+- `GET /me` — return the authenticated member's profile
+- `PUT /me` — update the authenticated member's profile (`first_name`, `last_name`)
+
+### `POST /checkemail` response
+
+```json
+{
+  "email": "user@example.com",
+  "format_valid": true,
+  "mx_valid": true,
+  "mx_check_available": true,
+  "mx_checked": true,
+  "valid": true
+}
+```
+
+`valid` is `true` when the format is valid and (if MX checking was performed) an MX record was found. When `mx_check_available` is `false` (e.g. on some hosting environments), `valid` reflects format validity only.
+
+### `POST /checkpassword` response
+
+```json
+{
+  "valid": true,
+  "errors": [],
+  "strength": {
+    "score": 3,
+    "label": "strong"
+  }
+}
+```
+
+`strength.label` is one of `"weak"`, `"medium"`, or `"strong"`. `strength.score` ranges from `0` (no criteria met) to `4` (all criteria met). `errors` contains any policy violation messages when `valid` is `false`.
+
+## Sharing Endpoints
+
+All endpoints are under `/api/v1/shares/`.
+
+- `POST /invite` — create invitation (`resource`, `object_id`, `invitee_email`, optional `permission`, `expires_in_seconds`, `message`)
+- `POST /{id}/accept` — accept invitation
+- `POST /{id}/decline` — decline invitation (optional `reason`)
+- `DELETE /{id}` — revoke invitation
+- `GET /mine` — list invitations for current member
+- `GET /object?resource=posts&object_id=123` — list invitations for one shareable object
+
+If `block_reinvite_after_decline` is enabled, a previously declined invite cannot be re-created for the same object/member pair.
+
+### Example Login
+
+```bash
+curl -X POST http://localhost/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password","device_name":"iPhone"}'
+```
+
+## JWT Middleware
+
+`App\Api\Middleware\JwtAuthMiddleware` validates `Authorization: Bearer <token>` and injects the member into route params.
+
+Use `RequiresJwtAuth` in controllers for:
+
+- `getCurrentMember()`
+- `requireAuth()`
+
+## API Session Model
+
+`ApiSession` fields:
+
+- `RefreshToken`
+- `UserAgent`
+- `IPAddress`
+- `DeviceName`
+- `LastUsed`
+- `ExpiresAt`
+- `MemberID`
+
+## Notes
+
+- Access token is stateless and short-lived (default 15 min)
+- Refresh token is long-lived and persisted (default 30 days)
+- Refresh token rotation is configurable
