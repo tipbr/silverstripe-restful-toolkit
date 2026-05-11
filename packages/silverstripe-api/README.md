@@ -95,18 +95,50 @@ Permissions are enforced with `canView`, `canCreate`, `canEdit`, and `canDelete`
 
 All endpoints are under `/api/v1/auth/`.
 
-- `POST /register`
-- `POST /login`
-- `POST /refresh`
-- `POST /logout`
-- `POST /logout-all`
-- `GET /sessions`
-- `DELETE /sessions/:id`
-- `POST /forgot-password`
-- `POST /reset-password`
-- `POST /change-password`
-- `GET /me`
-- `PUT /me`
+- `POST /register` — create account (`email`, `password`, `first_name`, `last_name`, optional `device_name`)
+- `POST /login` — authenticate (`email`, `password`, optional `device_name`)
+- `POST /checkemail` — pre-validate an email address (format + MX lookup); safe to call unauthenticated
+- `POST /checkpassword` — pre-validate a password against server policy and return strength metadata; safe to call unauthenticated
+- `POST /refresh` — exchange a refresh token for a new access token
+- `POST /logout` — revoke a specific session (`session_id`)
+- `POST /logout-all` — revoke all sessions for the authenticated member
+- `GET /sessions` — list active sessions for the authenticated member
+- `DELETE /sessions/:id` — revoke a session by ID
+- `POST /forgot-password` — send a password-reset email (`email`)
+- `POST /reset-password` — set a new password via reset token (`token`, `email`, `password`)
+- `POST /change-password` — change password for the authenticated member (`current_password`, `new_password`)
+- `GET /me` — return the authenticated member's profile
+- `PUT /me` — update the authenticated member's profile (`first_name`, `last_name`)
+
+### `POST /checkemail` response
+
+```json
+{
+  "email": "user@example.com",
+  "format_valid": true,
+  "mx_valid": true,
+  "mx_check_available": true,
+  "mx_checked": true,
+  "valid": true
+}
+```
+
+`valid` is `true` when the format is valid and (if MX checking was performed) an MX record was found. When `mx_check_available` is `false` (e.g. on some hosting environments), `valid` reflects format validity only.
+
+### `POST /checkpassword` response
+
+```json
+{
+  "valid": true,
+  "errors": [],
+  "strength": {
+    "score": 3,
+    "label": "strong"
+  }
+}
+```
+
+`strength.label` is one of `"weak"`, `"medium"`, or `"strong"`. `strength.score` ranges from `0` (no criteria met) to `4` (all criteria met). `errors` contains any policy violation messages when `valid` is `false`.
 
 ## Sharing Endpoints
 

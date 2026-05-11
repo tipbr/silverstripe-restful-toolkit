@@ -26,7 +26,7 @@ App\Api\Controllers\ApiController:
   max_page_size: 100
 
 App\Api\Controllers\AuthController:
-  # Minimum password length for register/reset/change-password
+  # Minimum password length used by register/reset/change-password and the checkpassword fallback
   min_password_length: 8
 
 App\Api\Services\SharingService:
