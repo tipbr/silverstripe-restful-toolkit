@@ -176,6 +176,7 @@ class AuthController extends ApiController
                 $mxValid = checkdnsrr($domain, 'MX');
             }
         }
+        $valid = $formatValid && (!$mxChecked || $mxValid);
 
         return $this->apiResponse([
             'email' => $email,
@@ -183,7 +184,7 @@ class AuthController extends ApiController
             'mx_valid' => $mxValid,
             'mx_check_available' => $mxCheckAvailable,
             'mx_checked' => $mxChecked,
-            'valid' => $formatValid && $mxValid,
+            'valid' => $valid,
         ]);
     }
 
