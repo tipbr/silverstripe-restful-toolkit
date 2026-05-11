@@ -197,7 +197,7 @@ class JwtService
     {
         $secret = trim((string)self::config()->get('secret'));
         if ($secret === '' || $secret === 'change-me') {
-            throw new RuntimeException('JWT secret is not configured. Set App\\Api\\Services\\JwtService.secret.');
+            throw new RuntimeException('JWT secret is not configured or insecure. Set a strong App\\Api\\Services\\JwtService.secret to protect token integrity.');
         }
 
         return $secret;

@@ -41,6 +41,7 @@ App\Api\Controllers\CrudApiController:
 ```
 
 Security note: avoid `'*'` in production `allowed_origins` unless the API is intentionally public for all origins.
+If `allowed_origins` is omitted or empty, CORS headers are not added (all cross-origin browser requests are effectively blocked).
 
 ## CRUD Scaffolding
 
