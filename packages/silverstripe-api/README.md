@@ -40,6 +40,8 @@ App\Api\Controllers\CrudApiController:
     comments: App\Model\Comment
 ```
 
+Security note: avoid `'*'` in production `allowed_origins` unless the API is intentionally public for all origins.
+
 ## CRUD Scaffolding
 
 Expose resources under `/api/v1/{resource}` and `/api/v1/{resource}/{id}`.

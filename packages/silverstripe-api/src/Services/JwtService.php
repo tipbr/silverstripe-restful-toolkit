@@ -11,6 +11,7 @@ use SilverStripe\Control\Email\Email;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
+use RuntimeException;
 use stdClass;
 use Throwable;
 
@@ -18,7 +19,7 @@ class JwtService
 {
     use Configurable;
 
-    private static string $secret = 'change-me';
+    private static string $secret = '';
     private static int $access_token_expiry = 900;
     private static int $refresh_token_expiry = 2592000;
     private static bool $rotate_refresh_tokens = true;
@@ -194,7 +195,12 @@ class JwtService
 
     private function getSecret(): string
     {
-        return (string)self::config()->get('secret');
+        $secret = trim((string)self::config()->get('secret'));
+        if ($secret === '' || $secret === 'change-me') {
+            throw new RuntimeException('JWT secret is not configured. Set App\\Api\\Services\\JwtService.secret.');
+        }
+
+        return $secret;
     }
 
     private function getAccessTokenExpiry(): int

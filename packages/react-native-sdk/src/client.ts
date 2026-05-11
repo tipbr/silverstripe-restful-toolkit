@@ -16,6 +16,27 @@ let runtimeConfig: ApiRuntimeConfig | null = null;
 let apiClient: AxiosInstance | null = null;
 let refreshPromise: Promise<void> | null = null;
 
+const shouldRetryRequest = (
+  error: AxiosError<ApiError>,
+  originalRequest: RetriableRequestConfig | undefined,
+): boolean => {
+  const requestUrl = originalRequest?.url ?? '';
+
+  if (!originalRequest) {
+    return false;
+  }
+
+  if (originalRequest._retry) {
+    return false;
+  }
+
+  if (error.response?.status !== 401) {
+    return false;
+  }
+
+  return !requestUrl.includes('/api/v1/auth/refresh');
+};
+
 const ensureConfigured = (): ApiRuntimeConfig => {
   if (!runtimeConfig) {
     throw new Error('API client has not been configured. Wrap your app with SilverstripeApiProvider.');
@@ -60,13 +81,13 @@ const setupInterceptors = (client: AxiosInstance): void => {
     async (error: AxiosError<ApiError>) => {
       const config = ensureConfigured();
       const originalRequest = error.config as RetriableRequestConfig | undefined;
-      const requestUrl = originalRequest?.url ?? '';
 
-      if (!originalRequest || originalRequest._retry || error.response?.status !== 401 || requestUrl.includes('/api/v1/auth/refresh')) {
+      if (!shouldRetryRequest(error, originalRequest)) {
         throw error;
       }
 
-      originalRequest._retry = true;
+      const retryRequest = originalRequest as RetriableRequestConfig;
+      retryRequest._retry = true;
 
       try {
         if (!refreshPromise) {
@@ -79,10 +100,10 @@ const setupInterceptors = (client: AxiosInstance): void => {
 
         const { access_token: accessToken } = await getAuthTokens(config.tokenStorage);
         if (accessToken) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          retryRequest.headers.Authorization = `Bearer ${accessToken}`;
         }
 
-        return client.request(originalRequest);
+        return client.request(retryRequest);
       } catch (refreshError) {
         await clearAuthTokens(config.tokenStorage);
         config.onAuthFailure?.();
