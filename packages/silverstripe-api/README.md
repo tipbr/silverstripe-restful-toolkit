@@ -6,6 +6,7 @@ A reusable Silverstripe 6 module that provides:
 - JWT access token authentication
 - Refresh-token sessions backed by `ApiSession`
 - Auth endpoints for registration, login, profile, sessions, and password flows
+- Configurable object-sharing invitations with read/write permissions
 
 ## Installation
 
@@ -30,6 +31,18 @@ App\Api\Services\JwtService:
   refresh_token_expiry: 2592000
   rotate_refresh_tokens: true
 
+App\Api\Services\SharingService:
+  default_share_expiry: 604800
+  block_reinvite_after_decline: true
+  allow_self_invite: false
+  allowed_permissions:
+    - read
+    - write
+  default_permission: read
+  resources:
+    posts: App\Model\Post
+  default_resource_namespace: 'App\\Model\\'
+
 App\Api\Middleware\CorsMiddleware:
   allowed_origins:
     - 'http://localhost:8081'
@@ -38,6 +51,11 @@ App\Api\Controllers\CrudApiController:
   resources:
     posts: App\Model\Post
     comments: App\Model\Comment
+
+App\Model\Post:
+  extensions:
+    - App\Api\Extensions\ShareableObjectExtension
+  share_owner_field: OwnerID
 ```
 
 Security note: avoid `'*'` in production `allowed_origins` unless the API is intentionally public for all origins.
@@ -78,6 +96,19 @@ All endpoints are under `/api/v1/auth/`.
 - `POST /change-password`
 - `GET /me`
 - `PUT /me`
+
+## Sharing Endpoints
+
+All endpoints are under `/api/v1/shares/`.
+
+- `POST /invite` — create invitation (`resource`, `object_id`, `invitee_email`, optional `permission`, `expires_in_seconds`, `message`)
+- `POST /{id}/accept` — accept invitation
+- `POST /{id}/decline` — decline invitation (optional `reason`)
+- `DELETE /{id}` — revoke invitation
+- `GET /mine` — list invitations for current member
+- `GET /object?resource=posts&object_id=123` — list invitations for one shareable object
+
+If `block_reinvite_after_decline` is enabled, a previously declined invite cannot be re-created for the same object/member pair.
 
 ### Example Login
 
