@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Api\Controllers;
 
+use App\Api\Services\IdObfuscationService;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Member;
@@ -21,6 +23,13 @@ class CrudApiController extends ApiController
     private static array $resources = [];
 
     private static string $default_resource_namespace = 'App\\Model\\';
+    private IdObfuscationService $idObfuscation;
+
+    protected function init(): void
+    {
+        parent::init();
+        $this->idObfuscation = Injector::inst()->get(IdObfuscationService::class);
+    }
 
     public function handle(HTTPRequest $request): HTTPResponse
     {
@@ -30,13 +39,20 @@ class CrudApiController extends ApiController
         }
 
         $id = $request->param('ID');
+        $resolvedId = null;
+        if ($id !== null && $id !== '') {
+            $resolvedId = $this->idObfuscation->decode($className, (string)$id);
+            if ($resolvedId === null) {
+                return $this->apiError('Invalid resource ID', 400);
+            }
+        }
         $method = strtoupper($request->httpMethod());
 
         return match ($method) {
-            'GET' => $id ? $this->show($className, (int)$id) : $this->index($className),
+            'GET' => $resolvedId !== null ? $this->show($className, $resolvedId) : $this->index($className),
             'POST' => $this->create($className),
-            'PUT', 'PATCH' => $id ? $this->update($className, (int)$id) : $this->apiError('Resource ID is required', 400),
-            'DELETE' => $id ? $this->destroy($className, (int)$id) : $this->apiError('Resource ID is required', 400),
+            'PUT', 'PATCH' => $resolvedId !== null ? $this->update($className, $resolvedId) : $this->apiError('Resource ID is required', 400),
+            'DELETE' => $resolvedId !== null ? $this->destroy($className, $resolvedId) : $this->apiError('Resource ID is required', 400),
             default => $this->apiError('Method not allowed', 405),
         };
     }
@@ -155,7 +171,7 @@ class CrudApiController extends ApiController
     protected function serializeRecord(DataObject $record): array
     {
         $fields = $this->getApiFields($record::class);
-        $payload = ['ID' => (int)$record->ID];
+        $payload = ['ID' => $this->idObfuscation->encodeForObject($record)];
 
         foreach ($fields as $field) {
             if ($record->hasField($field)) {

@@ -29,6 +29,11 @@ export const App = () => (
   <SilverstripeApiProvider
     baseUrl="https://api.example.com"
     queryClient={queryClient}
+    idMapping={{
+      enabled: true,
+      shortIds: true,
+      shortIdLength: 8,
+    }}
     onAuthFailure={() => {
       // Redirect to login screen
     }}
@@ -63,6 +68,16 @@ export const LoginScreen = () => {
 };
 ```
 
+## ID Mapping Options
+
+The provider supports optional ID mapping for obfuscated backend IDs:
+
+- `idMapping.enabled` (default `false`) enables client-side ID mapping support
+- `idMapping.shortIds` (default `false`) shortens UUID IDs in hook results/query keys
+- `idMapping.shortIdLength` (default `8`) controls generated short ID length
+
+When enabled, hooks convert short IDs back to full UUIDs before API requests.
+
 ## CRUD Hooks Factory Example
 
 ```tsx
@@ -71,7 +86,7 @@ import { FlatList, Text, View } from 'react-native';
 import { createCrudHooks } from 'react-native-silverstripe-sdk';
 
 type Todo = {
-  ID: number;
+  ID: string | number;
   Title: string;
   Body: string;
 };

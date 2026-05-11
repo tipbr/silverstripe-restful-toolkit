@@ -7,6 +7,7 @@ namespace App\Api\Services;
 use App\Api\Models\ApiSession;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Ramsey\Uuid\Uuid;
 use SilverStripe\Control\Email\Email;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\ORM\DB;
@@ -34,7 +35,7 @@ class JwtService
             'email' => (string)$member->Email,
             'iat' => $issuedAt,
             'exp' => $expiresAt,
-            'jti' => $this->generateUuidV4(),
+            'jti' => Uuid::uuid4()->toString(),
         ];
 
         return JWT::encode($payload, $this->getSecret(), 'HS256');
@@ -159,7 +160,7 @@ class JwtService
             'purpose' => 'password_reset',
             'iat' => $issuedAt,
             'exp' => $expiresAt,
-            'jti' => $this->generateUuidV4(),
+            'jti' => Uuid::uuid4()->toString(),
         ], $this->getSecret(), 'HS256');
     }
 
@@ -224,12 +225,4 @@ class JwtService
         return hash_hmac('sha256', $token, $this->getSecret());
     }
 
-    private function generateUuidV4(): string
-    {
-        $bytes = random_bytes(16);
-        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
-        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
-
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
-    }
 }

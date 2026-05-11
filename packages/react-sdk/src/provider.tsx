@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureApiClient } from './client';
+import { IdMapper, type IdMappingConfig } from './idMapping';
 import { createDefaultTokenStorage, type TokenStorage } from './storage';
 import type { AuthMode } from './types';
 
@@ -9,6 +10,7 @@ interface ApiConfigContextValue {
   tokenStorage: TokenStorage;
   authMode: AuthMode;
   withCredentials: boolean;
+  idMapper: IdMapper;
   onAuthFailure?: () => void;
 }
 
@@ -20,6 +22,7 @@ export interface SilverstripeApiProviderProps {
   tokenStorage?: TokenStorage;
   authMode?: AuthMode;
   withCredentials?: boolean;
+  idMapping?: IdMappingConfig;
   onAuthFailure?: () => void;
   children: React.ReactNode;
 }
@@ -30,11 +33,21 @@ export const SilverstripeApiProvider = ({
   tokenStorage,
   authMode = 'jwt',
   withCredentials,
+  idMapping,
   onAuthFailure,
   children,
 }: SilverstripeApiProviderProps): React.ReactElement => {
   const [client] = useState<QueryClient>(() => queryClient ?? new QueryClient());
   const storage = useMemo<TokenStorage>(() => tokenStorage ?? createDefaultTokenStorage(), [tokenStorage]);
+  const idMapper = useMemo(
+    () =>
+      new IdMapper({
+        enabled: idMapping?.enabled,
+        shortIds: idMapping?.shortIds,
+        shortIdLength: idMapping?.shortIdLength,
+      }),
+    [idMapping?.enabled, idMapping?.shortIds, idMapping?.shortIdLength],
+  );
   const resolvedWithCredentials = withCredentials ?? authMode === 'session';
 
   useEffect(() => {
@@ -53,9 +66,10 @@ export const SilverstripeApiProvider = ({
       tokenStorage: storage,
       authMode,
       withCredentials: resolvedWithCredentials,
+      idMapper,
       onAuthFailure,
     }),
-    [baseUrl, storage, authMode, resolvedWithCredentials, onAuthFailure],
+    [baseUrl, storage, authMode, resolvedWithCredentials, idMapper, onAuthFailure],
   );
 
   return (

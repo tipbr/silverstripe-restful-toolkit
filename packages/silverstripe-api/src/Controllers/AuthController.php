@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Api\Controllers;
 
 use App\Api\Models\ApiSession;
+use App\Api\Services\IdObfuscationService;
 use App\Api\Services\JwtService;
 use App\Api\Traits\RequiresJwtAuth;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
@@ -16,6 +18,8 @@ use SilverStripe\Security\Member;
 class AuthController extends ApiController
 {
     use RequiresJwtAuth;
+
+    private static int $min_password_length = 8;
 
     private static array $allowed_actions = [
         'register',
@@ -32,11 +36,13 @@ class AuthController extends ApiController
     ];
 
     private JwtService $jwtService;
+    private IdObfuscationService $idObfuscation;
 
     protected function init(): void
     {
         parent::init();
         $this->jwtService = Injector::inst()->get(JwtService::class);
+        $this->idObfuscation = Injector::inst()->get(IdObfuscationService::class);
     }
 
     public function register(HTTPRequest $request): HTTPResponse
@@ -57,6 +63,9 @@ class AuthController extends ApiController
         $member->Email = $email;
         $member->FirstName = trim((string)$data['first_name']);
         $member->Surname = trim((string)$data['last_name']);
+        if (!$this->isPasswordStrong((string)$data['password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['password']);
         $member->write();
 
@@ -65,6 +74,7 @@ class AuthController extends ApiController
             'ip_address' => (string)$request->getIP(),
             'device_name' => $data['device_name'] ?? null,
         ]);
+        $tokens['session_id'] = $this->idObfuscation->encode(ApiSession::class, (int)$tokens['session_id']);
 
         return $this->apiResponse($tokens, 201);
     }
@@ -91,6 +101,7 @@ class AuthController extends ApiController
             'ip_address' => (string)$request->getIP(),
             'device_name' => $data['device_name'] ?? null,
         ]);
+        $tokens['session_id'] = $this->idObfuscation->encode(ApiSession::class, (int)$tokens['session_id']);
 
         return $this->apiResponse($tokens);
     }
@@ -104,7 +115,13 @@ class AuthController extends ApiController
         $data = $this->getBodyParams();
         $this->requireFields(['refresh_token'], $data);
 
-        $sessionId = isset($data['session_id']) ? (int)$data['session_id'] : null;
+        $sessionId = null;
+        if (isset($data['session_id'])) {
+            $sessionId = $this->idObfuscation->decode(ApiSession::class, $data['session_id']);
+            if ($sessionId === null) {
+                return $this->apiError('Invalid session ID', 400);
+            }
+        }
         $session = $this->jwtService->validateRefreshToken((string)$data['refresh_token'], $sessionId);
 
         if (!$session || !$session->MemberID) {
@@ -121,7 +138,7 @@ class AuthController extends ApiController
 
         $response = [
             'access_token' => $this->jwtService->generateAccessToken($member),
-            'session_id' => (int)$session->ID,
+            'session_id' => $this->idObfuscation->encode(ApiSession::class, (int)$session->ID),
         ];
 
         if ($this->jwtService->shouldRotateRefreshTokens()) {
@@ -141,8 +158,13 @@ class AuthController extends ApiController
         $data = $this->getBodyParams();
         $this->requireFields(['session_id'], $data);
 
+        $sessionId = $this->idObfuscation->decode(ApiSession::class, $data['session_id']);
+        if ($sessionId === null) {
+            return $this->apiError('Invalid session ID', 400);
+        }
+
         /** @var ApiSession|null $session */
-        $session = ApiSession::get()->byID((int)$data['session_id']);
+        $session = ApiSession::get()->byID($sessionId);
         if (!$session || (int)$session->MemberID !== (int)$member->ID) {
             return $this->apiError('Session not found', 404);
         }
@@ -172,8 +194,14 @@ class AuthController extends ApiController
 
         $member = $this->requireAuth();
 
+        $sessions = $this->jwtService->listSessions($member);
+        $mapped = array_map(function (array $session): array {
+            $session['id'] = $this->idObfuscation->encode(ApiSession::class, (int)$session['id']);
+            return $session;
+        }, $sessions);
+
         return $this->apiResponse([
-            'data' => $this->jwtService->listSessions($member),
+            'data' => $mapped,
         ]);
     }
 
@@ -184,7 +212,10 @@ class AuthController extends ApiController
         }
 
         $member = $this->requireAuth();
-        $id = (int)$request->param('ID');
+        $id = $this->idObfuscation->decode(ApiSession::class, (string)$request->param('ID'));
+        if ($id === null) {
+            return $this->apiError('Invalid session ID', 400);
+        }
 
         /** @var ApiSession|null $session */
         $session = ApiSession::get()->byID($id);
@@ -232,6 +263,9 @@ class AuthController extends ApiController
             return $this->apiError('Invalid reset token', 400);
         }
 
+        if (!$this->isPasswordStrong((string)$data['password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['password']);
         $member->write();
 
@@ -254,6 +288,9 @@ class AuthController extends ApiController
             return $this->apiError('Current password is incorrect', 400);
         }
 
+        if (!$this->isPasswordStrong((string)$data['new_password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['new_password']);
         $member->write();
 
@@ -291,15 +328,25 @@ class AuthController extends ApiController
     }
 
     /**
-     * @return array{id:int,email:string,first_name:string,last_name:string}
+     * @return array{id:int|string,email:string,first_name:string,last_name:string}
      */
     private function serializeMember(Member $member): array
     {
         return [
-            'id' => (int)$member->ID,
+            'id' => $this->idObfuscation->encode(Member::class, (int)$member->ID),
             'email' => (string)$member->Email,
             'first_name' => (string)$member->FirstName,
             'last_name' => (string)$member->Surname,
         ];
+    }
+
+    private function isPasswordStrong(string $password): bool
+    {
+        return mb_strlen($password) >= $this->getMinPasswordLength();
+    }
+
+    private function getMinPasswordLength(): int
+    {
+        return max(8, (int)Config::inst()->get(self::class, 'min_password_length'));
     }
 }

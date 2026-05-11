@@ -6,6 +6,7 @@ namespace App\Api\Controllers;
 
 use App\Api\Extensions\ShareableObjectExtension;
 use App\Api\Models\ObjectShare;
+use App\Api\Services\IdObfuscationService;
 use App\Api\Services\SharingService;
 use App\Api\Traits\RequiresJwtAuth;
 use RuntimeException;
@@ -29,11 +30,13 @@ class SharingController extends ApiController
     ];
 
     private SharingService $sharingService;
+    private IdObfuscationService $idObfuscation;
 
     protected function init(): void
     {
         parent::init();
         $this->sharingService = Injector::inst()->get(SharingService::class);
+        $this->idObfuscation = Injector::inst()->get(IdObfuscationService::class);
     }
 
     public function invite(HTTPRequest $request): HTTPResponse
@@ -46,7 +49,18 @@ class SharingController extends ApiController
         $data = $this->getBodyParams();
         $this->requireFields(['resource', 'object_id', 'invitee_email'], $data);
 
-        $object = $this->sharingService->resolveObjectFromResource((string)$data['resource'], (int)$data['object_id']);
+        $resource = (string)$data['resource'];
+        $resourceClass = $this->sharingService->resolveClassFromResource($resource);
+        if (!$resourceClass) {
+            return $this->apiError('Shareable object not found', 404);
+        }
+
+        $objectId = $this->idObfuscation->decode($resourceClass, $data['object_id']);
+        if ($objectId === null) {
+            return $this->apiError('Invalid object ID', 400);
+        }
+
+        $object = $this->sharingService->resolveObjectFromResource($resource, $objectId);
         if (!$object) {
             return $this->apiError('Shareable object not found', 404);
         }
@@ -184,9 +198,10 @@ class SharingController extends ApiController
 
         $member = $this->requireAuth();
         $resource = (string)$request->getVar('resource');
-        $objectId = (int)$request->getVar('object_id');
+        $resourceClass = $this->sharingService->resolveClassFromResource($resource);
+        $objectId = $resourceClass ? $this->idObfuscation->decode($resourceClass, $request->getVar('object_id')) : null;
 
-        if ($resource === '' || $objectId <= 0) {
+        if ($resource === '' || $objectId === null) {
             return $this->apiError('resource and object_id are required query params', 400);
         }
 
@@ -219,8 +234,8 @@ class SharingController extends ApiController
 
     private function findShareByRequest(HTTPRequest $request): ?ObjectShare
     {
-        $id = (int)$request->param('ID');
-        if ($id <= 0) {
+        $id = $this->idObfuscation->decode(ObjectShare::class, (string)$request->param('ID'));
+        if ($id === null) {
             return null;
         }
 

@@ -1,4 +1,5 @@
 export type PrimitiveFilter = string | number;
+export type Identifier = string | number;
 export type AuthMode = 'jwt' | 'session';
 
 export interface PaginatedMeta {
@@ -26,11 +27,11 @@ export interface ApiSuccess {
 export interface AuthTokens {
   access_token: string;
   refresh_token: string;
-  session_id: number;
+  session_id: Identifier;
 }
 
 export interface SessionInfo {
-  id: number;
+  id: Identifier;
   device_name: string;
   ip: string;
   last_used: string;
@@ -38,7 +39,7 @@ export interface SessionInfo {
 }
 
 export interface MemberProfile {
-  id: number;
+  id: Identifier;
   email: string;
   first_name: string;
   last_name: string;
@@ -60,7 +61,7 @@ export interface RegisterRequest {
 
 export interface RefreshRequest {
   refresh_token: string;
-  session_id?: number;
+  session_id?: Identifier;
 }
 
 export interface ResetPasswordRequest {
