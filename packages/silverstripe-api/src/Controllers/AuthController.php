@@ -10,6 +10,7 @@ use App\Api\Services\JwtService;
 use App\Api\Traits\RequiresJwtAuth;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
@@ -17,6 +18,8 @@ use SilverStripe\Security\Member;
 class AuthController extends ApiController
 {
     use RequiresJwtAuth;
+
+    private static int $min_password_length = 8;
 
     private static array $allowed_actions = [
         'register',
@@ -60,6 +63,9 @@ class AuthController extends ApiController
         $member->Email = $email;
         $member->FirstName = trim((string)$data['first_name']);
         $member->Surname = trim((string)$data['last_name']);
+        if (!$this->isPasswordStrong((string)$data['password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['password']);
         $member->write();
 
@@ -257,6 +263,9 @@ class AuthController extends ApiController
             return $this->apiError('Invalid reset token', 400);
         }
 
+        if (!$this->isPasswordStrong((string)$data['password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['password']);
         $member->write();
 
@@ -279,6 +288,9 @@ class AuthController extends ApiController
             return $this->apiError('Current password is incorrect', 400);
         }
 
+        if (!$this->isPasswordStrong((string)$data['new_password'])) {
+            return $this->apiError(sprintf('Password must be at least %d characters', $this->getMinPasswordLength()), 400);
+        }
         $member->changePassword((string)$data['new_password']);
         $member->write();
 
@@ -326,5 +338,15 @@ class AuthController extends ApiController
             'first_name' => (string)$member->FirstName,
             'last_name' => (string)$member->Surname,
         ];
+    }
+
+    private function isPasswordStrong(string $password): bool
+    {
+        return mb_strlen($password) >= $this->getMinPasswordLength();
+    }
+
+    private function getMinPasswordLength(): int
+    {
+        return max(8, (int)Config::inst()->get(self::class, 'min_password_length'));
     }
 }

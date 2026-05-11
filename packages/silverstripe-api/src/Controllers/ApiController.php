@@ -12,6 +12,8 @@ use SilverStripe\ORM\PaginatedList;
 
 class ApiController extends Controller
 {
+    private static int $max_page_size = 100;
+
     protected function apiResponse(array $data, int $status = 200): HTTPResponse
     {
         $response = HTTPResponse::create(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}', $status);
@@ -43,7 +45,8 @@ class ApiController extends Controller
     {
         $request = $this->getRequest();
         $page = max(1, (int)($request->getVar('page') ?? 1));
-        $perPage = max(1, (int)($request->getVar('per_page') ?? $defaultPageSize));
+        $maxPageSize = max(1, (int)self::config()->get('max_page_size'));
+        $perPage = min($maxPageSize, max(1, (int)($request->getVar('per_page') ?? $defaultPageSize)));
 
         $paginated = PaginatedList::create($list, $request)
             ->setPageLength($perPage)

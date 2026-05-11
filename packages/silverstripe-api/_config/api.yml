@@ -21,6 +21,14 @@ App\Api\Services\IdObfuscationService:
   # Supported: v1, v4, v6, v7
   uuid_type: v4
 
+App\Api\Controllers\ApiController:
+  # Upper bound for per_page requests
+  max_page_size: 100
+
+App\Api\Controllers\AuthController:
+  # Minimum password length for register/reset/change-password
+  min_password_length: 8
+
 App\Api\Services\SharingService:
   # Default invitation expiration (seconds)
   default_share_expiry: 604800

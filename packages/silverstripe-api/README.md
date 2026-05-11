@@ -35,6 +35,12 @@ App\Api\Services\IdObfuscationService:
   enabled: false
   uuid_type: v4
 
+App\Api\Controllers\ApiController:
+  max_page_size: 100
+
+App\Api\Controllers\AuthController:
+  min_password_length: 8
+
 App\Api\Services\SharingService:
   default_share_expiry: 604800
   block_reinvite_after_decline: true
