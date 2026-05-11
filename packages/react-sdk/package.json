@@ -11,17 +11,20 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src index.ts"
   },
   "peerDependencies": {
-    "react": ">=18",
-    "@tanstack/react-query": "^5.0.0"
+    "@tanstack/react-query": "^5.0.0",
+    "react": ">=18"
   },
   "dependencies": {
     "axios": "^1.7.7"
   },
   "devDependencies": {
+    "@types/react": "^19.2.0",
+    "eslint": "^9.39.4",
     "typescript": "^5.6.2",
-    "@types/react": "^19.2.0"
+    "typescript-eslint": "^8.59.2"
   }
 }
