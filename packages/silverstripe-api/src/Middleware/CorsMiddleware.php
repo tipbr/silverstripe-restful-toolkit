@@ -36,6 +36,7 @@ class CorsMiddleware implements HTTPMiddleware
         } elseif ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
             $response->addHeader('Access-Control-Allow-Origin', $origin);
             $response->addHeader('Vary', 'Origin');
+            $response->addHeader('Access-Control-Allow-Credentials', 'true');
         }
 
         $response->addHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');

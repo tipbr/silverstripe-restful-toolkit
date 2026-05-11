@@ -158,6 +158,9 @@ class JwtService
             'sub' => (int)$member->ID,
             'email' => (string)$member->Email,
             'purpose' => 'password_reset',
+            // Bind token to the current password hash so that changing the password
+            // immediately invalidates any in-flight reset tokens (single-use behaviour).
+            'pwd_slug' => substr(hash('sha256', (string)$member->Password), 0, 16),
             'iat' => $issuedAt,
             'exp' => $expiresAt,
             'jti' => Uuid::uuid4()->toString(),
@@ -183,7 +186,18 @@ class JwtService
                 return null;
             }
 
-            return strtolower((string)$member->Email) === strtolower($email) ? $member : null;
+            if (strtolower((string)$member->Email) !== strtolower($email)) {
+                return null;
+            }
+
+            // Verify the token is still bound to the member's current password.
+            // A mismatch means the password was already changed and the token is spent.
+            $expectedSlug = substr(hash('sha256', (string)$member->Password), 0, 16);
+            if (!isset($claims->pwd_slug) || $claims->pwd_slug !== $expectedSlug) {
+                return null;
+            }
+
+            return $member;
         } catch (Throwable) {
             return null;
         }
