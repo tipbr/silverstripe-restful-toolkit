@@ -14,6 +14,10 @@ const decodePayload = (token: string): JwtPayload | null => {
   }
 
   try {
+    if (typeof globalThis.atob !== 'function') {
+      return null;
+    }
+
     const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
     const decoded = globalThis.atob(normalized);
     const parsed: unknown = JSON.parse(decoded);

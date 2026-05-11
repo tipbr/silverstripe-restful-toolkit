@@ -196,8 +196,9 @@ class JwtService
     private function getSecret(): string
     {
         $secret = trim((string)self::config()->get('secret'));
-        if ($secret === '' || $secret === 'change-me') {
-            throw new RuntimeException('JWT secret is not configured or insecure. Set a strong App\\Api\\Services\\JwtService.secret to protect token integrity.');
+        $weakValues = ['change-me', 'secret', 'password', '123456'];
+        if ($secret === '' || in_array(strtolower($secret), $weakValues, true) || strlen($secret) < 32) {
+            throw new RuntimeException('JWT secret is missing or weak. Set App\\Api\\Services\\JwtService.secret to a unique value of at least 32 characters.');
         }
 
         return $secret;
