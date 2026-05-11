@@ -458,7 +458,9 @@ class AuthController extends ApiController
             }
         }
 
-        $messages = array_values(array_filter(array_unique($messages), static fn (string $value): bool => $value !== ''));
+        $uniqueMessages = array_unique($messages);
+        $filteredMessages = array_filter($uniqueMessages, static fn (string $value): bool => $value !== '');
+        $messages = array_values($filteredMessages);
 
         if ($messages === [] && !$validation->isValid()) {
             $messages[] = sprintf('Password must be at least %d characters', $this->getMinPasswordLength());
