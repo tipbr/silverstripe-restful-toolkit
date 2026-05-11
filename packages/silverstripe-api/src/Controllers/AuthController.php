@@ -1,0 +1,305 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Api\Controllers;
+
+use App\Api\Models\ApiSession;
+use App\Api\Services\JwtService;
+use App\Api\Traits\RequiresJwtAuth;
+use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Injector\Injector;
+use SilverStripe\ORM\DB;
+use SilverStripe\Security\Member;
+
+class AuthController extends ApiController
+{
+    use RequiresJwtAuth;
+
+    private static array $allowed_actions = [
+        'register',
+        'login',
+        'refresh',
+        'logout',
+        'logoutAll',
+        'sessions',
+        'sessionById',
+        'forgotPassword',
+        'resetPassword',
+        'changePassword',
+        'me',
+    ];
+
+    private JwtService $jwtService;
+
+    protected function init(): void
+    {
+        parent::init();
+        $this->jwtService = Injector::inst()->get(JwtService::class);
+    }
+
+    public function register(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['email', 'password', 'first_name', 'last_name'], $data);
+
+        $email = strtolower(trim((string)$data['email']));
+        if (Member::get()->filter('Email', $email)->exists()) {
+            return $this->apiError('Email is already registered', 409);
+        }
+
+        $member = Member::create();
+        $member->Email = $email;
+        $member->FirstName = trim((string)$data['first_name']);
+        $member->Surname = trim((string)$data['last_name']);
+        $member->changePassword((string)$data['password']);
+        $member->write();
+
+        $tokens = $this->jwtService->issueTokens($member, [
+            'user_agent' => (string)$request->getHeader('User-Agent'),
+            'ip_address' => (string)$request->getIP(),
+            'device_name' => $data['device_name'] ?? null,
+        ]);
+
+        return $this->apiResponse($tokens, 201);
+    }
+
+    public function login(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['email', 'password'], $data);
+
+        $email = strtolower(trim((string)$data['email']));
+        /** @var Member|null $member */
+        $member = Member::get()->filter('Email', $email)->first();
+
+        if (!$member || !$member->checkPassword((string)$data['password'])->isValid()) {
+            return $this->apiError('Invalid credentials', 401);
+        }
+
+        $tokens = $this->jwtService->issueTokens($member, [
+            'user_agent' => (string)$request->getHeader('User-Agent'),
+            'ip_address' => (string)$request->getIP(),
+            'device_name' => $data['device_name'] ?? null,
+        ]);
+
+        return $this->apiResponse($tokens);
+    }
+
+    public function refresh(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['refresh_token'], $data);
+
+        $sessionId = isset($data['session_id']) ? (int)$data['session_id'] : null;
+        $session = $this->jwtService->validateRefreshToken((string)$data['refresh_token'], $sessionId);
+
+        if (!$session || !$session->MemberID) {
+            return $this->apiError('Invalid refresh token', 401);
+        }
+
+        $session->LastUsed = DB::get_conn()->now();
+        $session->write();
+
+        $member = $session->Member();
+        if (!$member) {
+            return $this->apiError('Invalid session member', 401);
+        }
+
+        $response = [
+            'access_token' => $this->jwtService->generateAccessToken($member),
+            'session_id' => (int)$session->ID,
+        ];
+
+        if ($this->jwtService->shouldRotateRefreshTokens()) {
+            $response['refresh_token'] = $this->jwtService->rotateRefreshToken($session);
+        }
+
+        return $this->apiResponse($response);
+    }
+
+    public function logout(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $member = $this->requireAuth();
+        $data = $this->getBodyParams();
+        $this->requireFields(['session_id'], $data);
+
+        /** @var ApiSession|null $session */
+        $session = ApiSession::get()->byID((int)$data['session_id']);
+        if (!$session || (int)$session->MemberID !== (int)$member->ID) {
+            return $this->apiError('Session not found', 404);
+        }
+
+        $this->jwtService->revokeSession($session);
+
+        return $this->apiSuccess('Logged out');
+    }
+
+    public function logoutAll(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $member = $this->requireAuth();
+        $this->jwtService->revokeAllSessions($member);
+
+        return $this->apiSuccess('Logged out from all devices');
+    }
+
+    public function sessions(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'GET') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $member = $this->requireAuth();
+
+        return $this->apiResponse([
+            'data' => $this->jwtService->listSessions($member),
+        ]);
+    }
+
+    public function sessionById(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'DELETE') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $member = $this->requireAuth();
+        $id = (int)$request->param('ID');
+
+        /** @var ApiSession|null $session */
+        $session = ApiSession::get()->byID($id);
+
+        if (!$session || (int)$session->MemberID !== (int)$member->ID) {
+            return $this->apiError('Session not found', 404);
+        }
+
+        $this->jwtService->revokeSession($session);
+
+        return $this->apiSuccess('Session revoked');
+    }
+
+    public function forgotPassword(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['email'], $data);
+
+        $email = strtolower(trim((string)$data['email']));
+        /** @var Member|null $member */
+        $member = Member::get()->filter('Email', $email)->first();
+
+        if ($member) {
+            $this->jwtService->sendPasswordResetEmail($member);
+        }
+
+        return $this->apiSuccess('If the email exists, a password reset link has been sent.');
+    }
+
+    public function resetPassword(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $data = $this->getBodyParams();
+        $this->requireFields(['token', 'email', 'password'], $data);
+
+        $member = $this->jwtService->validatePasswordResetToken((string)$data['token'], (string)$data['email']);
+        if (!$member) {
+            return $this->apiError('Invalid reset token', 400);
+        }
+
+        $member->changePassword((string)$data['password']);
+        $member->write();
+
+        $this->jwtService->revokeAllSessions($member);
+
+        return $this->apiSuccess('Password reset successful');
+    }
+
+    public function changePassword(HTTPRequest $request): HTTPResponse
+    {
+        if (strtoupper($request->httpMethod()) !== 'POST') {
+            return $this->apiError('Method not allowed', 405);
+        }
+
+        $member = $this->requireAuth();
+        $data = $this->getBodyParams();
+        $this->requireFields(['current_password', 'new_password'], $data);
+
+        if (!$member->checkPassword((string)$data['current_password'])->isValid()) {
+            return $this->apiError('Current password is incorrect', 400);
+        }
+
+        $member->changePassword((string)$data['new_password']);
+        $member->write();
+
+        return $this->apiSuccess('Password changed');
+    }
+
+    public function me(HTTPRequest $request): HTTPResponse
+    {
+        $member = $this->requireAuth();
+        $method = strtoupper($request->httpMethod());
+
+        if ($method === 'GET') {
+            return $this->apiResponse([
+                'data' => $this->serializeMember($member),
+            ]);
+        }
+
+        if ($method === 'PUT' || $method === 'PATCH') {
+            $data = $this->getBodyParams();
+            if (isset($data['first_name'])) {
+                $member->FirstName = trim((string)$data['first_name']);
+            }
+            if (isset($data['last_name'])) {
+                $member->Surname = trim((string)$data['last_name']);
+            }
+            $member->write();
+
+            return $this->apiResponse([
+                'message' => 'Profile updated',
+                'data' => $this->serializeMember($member),
+            ]);
+        }
+
+        return $this->apiError('Method not allowed', 405);
+    }
+
+    /**
+     * @return array{id:int,email:string,first_name:string,last_name:string}
+     */
+    private function serializeMember(Member $member): array
+    {
+        return [
+            'id' => (int)$member->ID,
+            'email' => (string)$member->Email,
+            'first_name' => (string)$member->FirstName,
+            'last_name' => (string)$member->Surname,
+        ];
+    }
+}

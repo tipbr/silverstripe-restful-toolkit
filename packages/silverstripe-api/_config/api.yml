@@ -1,0 +1,46 @@
+---
+Name: app-api-config
+---
+SilverStripe\Control\Director:
+  middlewares:
+    AppApiCorsMiddleware: '%$App\\Api\\Middleware\\CorsMiddleware'
+
+App\Api\Services\JwtService:
+  # Strong signing secret (e.g. from env var)
+  secret: '`SS_JWT_SECRET`'
+  # Access token TTL in seconds
+  access_token_expiry: 900
+  # Refresh token/session TTL in seconds
+  refresh_token_expiry: 2592000
+  # When true, /auth/refresh issues a new refresh token value
+  rotate_refresh_tokens: true
+
+App\Api\Services\SharingService:
+  # Default invitation expiration (seconds)
+  default_share_expiry: 604800
+  # When true, members who declined an invite cannot be reinvited for that same object
+  block_reinvite_after_decline: true
+  # Allow inviting yourself
+  allow_self_invite: false
+  # Allowed permission values for shares
+  allowed_permissions:
+    - read
+    - write
+  # Permission used when client doesn't send one
+  default_permission: read
+  # Optional explicit resource map for sharing endpoints
+  resources: []
+  # Fallback namespace used when resource map is empty
+  default_resource_namespace: 'App\\Model\\'
+
+App\Api\Middleware\CorsMiddleware:
+  # Allowed CORS origins. Use '*' only for intentionally public APIs.
+  allowed_origins:
+    - 'http://localhost:8081'
+
+# Example shareable object configuration in your host project:
+# App\Model\Post:
+#   extensions:
+#     - App\Api\Extensions\ShareableObjectExtension
+#   # Optional owner field used for canManageShares checks
+#   share_owner_field: OwnerID
