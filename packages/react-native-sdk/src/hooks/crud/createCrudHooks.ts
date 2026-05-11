@@ -92,9 +92,9 @@ export const createCrudHooks = <T>(resourcePath: string) => {
         return response.data.data;
       },
       ...options,
-      onSuccess: async (data, variables, onMutateResult, context) => {
+      onSuccess: async (data, variables, mutateContext, context) => {
         await queryClient.invalidateQueries({ queryKey: listKey as unknown as QueryKey });
-        await options?.onSuccess?.(data, variables, onMutateResult, context);
+        await options?.onSuccess?.(data, variables, mutateContext, context);
       },
     });
   };
@@ -110,9 +110,9 @@ export const createCrudHooks = <T>(resourcePath: string) => {
         return response.data.data;
       },
       ...options,
-      onSuccess: async (data, variables, onMutateResult, context) => {
+      onSuccess: async (data, variables, mutateContext, context) => {
         await queryClient.invalidateQueries({ queryKey: listKey as unknown as QueryKey });
-        await options?.onSuccess?.(data, variables, onMutateResult, context);
+        await options?.onSuccess?.(data, variables, mutateContext, context);
       },
     });
   };
@@ -127,9 +127,9 @@ export const createCrudHooks = <T>(resourcePath: string) => {
         await getApiClient().delete(`${endpoint}/${id}`);
       },
       ...options,
-      onSuccess: async (data, variables, onMutateResult, context) => {
+      onSuccess: async (data, variables, mutateContext, context) => {
         await queryClient.invalidateQueries({ queryKey: listKey as unknown as QueryKey });
-        await options?.onSuccess?.(data, variables, onMutateResult, context);
+        await options?.onSuccess?.(data, variables, mutateContext, context);
       },
     });
   };

@@ -16,9 +16,9 @@ export const useLogoutAll = (
       return response.data;
     },
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, mutateContext, context) => {
       await clearAuthTokens(tokenStorage);
-      await options?.onSuccess?.(data, variables, onMutateResult, context);
+      await options?.onSuccess?.(data, variables, mutateContext, context);
     },
   });
 };

@@ -94,7 +94,7 @@ class JwtService
     {
         $token = $this->generateRefreshToken();
         $session->RefreshToken = $this->hashRefreshToken($token);
-        $session->LastUsed = date('Y-m-d H:i:s');
+        $session->LastUsed = DB::get_conn()->now();
         $session->ExpiresAt = date('Y-m-d H:i:s', time() + $this->getRefreshTokenExpiry());
         $session->write();
 

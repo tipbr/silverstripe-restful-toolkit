@@ -10,6 +10,7 @@ use App\Api\Traits\RequiresJwtAuth;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
 
 class AuthController extends ApiController
@@ -110,7 +111,7 @@ class AuthController extends ApiController
             return $this->apiError('Invalid refresh token', 401);
         }
 
-        $session->LastUsed = date('Y-m-d H:i:s');
+        $session->LastUsed = DB::get_conn()->now();
         $session->write();
 
         $member = $session->Member();
