@@ -166,10 +166,14 @@ class AuthController extends ApiController
         $formatValid = filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 
         $mxValid = false;
+        $mxCheckAvailable = function_exists('checkdnsrr');
+        $mxChecked = false;
         if ($formatValid) {
-            $domain = (string)substr(strrchr($email, '@') ?: '', 1);
-            if ($domain !== '') {
-                $mxValid = function_exists('checkdnsrr') && checkdnsrr($domain, 'MX');
+            $parts = explode('@', $email, 2);
+            $domain = count($parts) === 2 ? trim($parts[1]) : '';
+            if ($domain !== '' && $mxCheckAvailable) {
+                $mxChecked = true;
+                $mxValid = checkdnsrr($domain, 'MX');
             }
         }
 
@@ -177,6 +181,8 @@ class AuthController extends ApiController
             'email' => $email,
             'format_valid' => $formatValid,
             'mx_valid' => $mxValid,
+            'mx_check_available' => $mxCheckAvailable,
+            'mx_checked' => $mxChecked,
             'valid' => $formatValid && $mxValid,
         ]);
     }
@@ -463,7 +469,7 @@ class AuthController extends ApiController
         $messages = array_values($filteredMessages);
 
         if ($messages === [] && !$validation->isValid()) {
-            $messages[] = sprintf('Password must be at least %d characters', $this->getMinPasswordLength());
+            $messages[] = 'Password does not meet security requirements';
         }
 
         return $messages;
