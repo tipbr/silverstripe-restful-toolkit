@@ -1,23 +1,23 @@
 ---
-Name: app-api-routes
+Name: tipbr-restful-toolkit-routes
 After:
   - '#rootroutes'
 ---
 SilverStripe\Control\Director:
   rules:
-    'api/v1/auth/register': 'App\\Api\\Controllers\\AuthController/register'
-    'api/v1/auth/login': 'App\\Api\\Controllers\\AuthController/login'
-    'api/v1/auth/checkemail': 'App\\Api\\Controllers\\AuthController/checkEmail'
-    'api/v1/auth/checkpassword': 'App\\Api\\Controllers\\AuthController/checkPassword'
-    'api/v1/auth/refresh': 'App\\Api\\Controllers\\AuthController/refresh'
-    'api/v1/auth/logout': 'App\\Api\\Controllers\\AuthController/logout'
-    'api/v1/auth/logout-all': 'App\\Api\\Controllers\\AuthController/logoutAll'
-    'api/v1/auth/sessions/$ID': 'App\\Api\\Controllers\\AuthController/sessionById'
-    'api/v1/auth/sessions': 'App\\Api\\Controllers\\AuthController/sessions'
-    'api/v1/auth/forgot-password': 'App\\Api\\Controllers\\AuthController/forgotPassword'
-    'api/v1/auth/reset-password': 'App\\Api\\Controllers\\AuthController/resetPassword'
-    'api/v1/auth/change-password': 'App\\Api\\Controllers\\AuthController/changePassword'
-    'api/v1/auth/me': 'App\\Api\\Controllers\\AuthController/me'
+    'api/v1/auth/register': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/register'
+    'api/v1/auth/login': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/login'
+    'api/v1/auth/checkemail': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/checkEmail'
+    'api/v1/auth/checkpassword': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/checkPassword'
+    'api/v1/auth/refresh': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/refresh'
+    'api/v1/auth/logout': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/logout'
+    'api/v1/auth/logout-all': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/logoutAll'
+    'api/v1/auth/sessions/$ID': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/sessionById'
+    'api/v1/auth/sessions': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/sessions'
+    'api/v1/auth/forgot-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/forgotPassword'
+    'api/v1/auth/reset-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/resetPassword'
+    'api/v1/auth/change-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/changePassword'
+    'api/v1/auth/me': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/me'
     'api/v1/shares/invite': 'App\\Api\\Controllers\\SharingController/invite'
     'api/v1/shares/mine': 'App\\Api\\Controllers\\SharingController/mine'
     'api/v1/shares/object': 'App\\Api\\Controllers\\SharingController/objectShares'

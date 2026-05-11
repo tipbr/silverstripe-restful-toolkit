@@ -1,11 +1,11 @@
 ---
-Name: app-api-config
+Name: tipbr-restful-toolkit-config
 ---
 SilverStripe\Control\Director:
   middlewares:
-    AppApiCorsMiddleware: '%$App\\Api\\Middleware\\CorsMiddleware'
+    AppApiCorsMiddleware: '%$Tipbr\\RestfulToolkit\\Middleware\\CorsMiddleware'
 
-App\Api\Services\JwtService:
+Tipbr\RestfulToolkit\Services\JwtService:
   # Strong signing secret (e.g. from env var)
   secret: '`SS_JWT_SECRET`'
   # Access token TTL in seconds
@@ -15,21 +15,21 @@ App\Api\Services\JwtService:
   # When true, /auth/refresh issues a new refresh token value
   rotate_refresh_tokens: true
 
-App\Api\Services\IdObfuscationService:
+Tipbr\RestfulToolkit\Services\IdObfuscationService:
   # When true, API-exposed IDs are UUIDs mapped from internal incremental IDs
   enabled: false
   # Supported: v1, v4, v6, v7
   uuid_type: v4
 
-App\Api\Controllers\ApiController:
+Tipbr\RestfulToolkit\Controllers\ApiController:
   # Upper bound for per_page requests
   max_page_size: 100
 
-App\Api\Controllers\AuthController:
+Tipbr\RestfulToolkit\Controllers\AuthController:
   # Minimum password length used by register/reset/change-password and the checkpassword fallback
   min_password_length: 8
 
-App\Api\Services\SharingService:
+Tipbr\RestfulToolkit\Services\SharingService:
   # Default invitation expiration (seconds)
   default_share_expiry: 604800
   # When true, members who declined an invite cannot be reinvited for that same object
@@ -47,7 +47,7 @@ App\Api\Services\SharingService:
   # Fallback namespace used when resource map is empty
   default_resource_namespace: 'App\\Model\\'
 
-App\Api\Middleware\CorsMiddleware:
+Tipbr\RestfulToolkit\Middleware\CorsMiddleware:
   # Allowed CORS origins. Use '*' only for intentionally public APIs.
   allowed_origins:
     - 'http://localhost:8081'
@@ -55,6 +55,6 @@ App\Api\Middleware\CorsMiddleware:
 # Example shareable object configuration in your host project:
 # App\Model\Post:
 #   extensions:
-#     - App\Api\Extensions\ShareableObjectExtension
+#     - Tipbr\RestfulToolkit\Extensions\ShareableObjectExtension
 #   # Optional owner field used for canManageShares checks
 #   share_owner_field: OwnerID

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Controllers;
+namespace Tipbr\RestfulToolkit\Controllers;
 
-use App\Api\Models\ApiSession;
-use App\Api\Services\IdObfuscationService;
-use App\Api\Services\JwtService;
-use App\Api\Traits\RequiresJwtAuth;
+use Tipbr\RestfulToolkit\Models\ApiSession;
+use Tipbr\RestfulToolkit\Services\IdObfuscationService;
+use Tipbr\RestfulToolkit\Services\JwtService;
+use Tipbr\RestfulToolkit\Traits\RequiresJwtAuth;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;

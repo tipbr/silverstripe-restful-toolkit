@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Middleware;
+namespace Tipbr\RestfulToolkit\Middleware;
 
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
