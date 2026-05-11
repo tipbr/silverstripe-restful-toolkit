@@ -89,7 +89,53 @@ private static array $api_fields = [
 ];
 ```
 
+### Restricting writable fields
+
+By default the same fields that are serialized in GET responses (`api_fields`) are also accepted on
+POST / PUT / PATCH. If you want to expose read-only fields (e.g. `Slug`, `Created`) in responses
+without allowing clients to set them, define `api_write_fields` on the DataObject:
+
+```php
+private static array $api_fields = [
+    'Title',
+    'Body',
+    'Slug',    // returned on reads …
+    'Created', // … but not writable
+];
+
+private static array $api_write_fields = [
+    'Title',
+    'Body',    // only these fields are accepted on POST/PUT/PATCH
+];
+```
+
+When `api_write_fields` is absent, write access falls back to `api_fields` (existing behaviour).
+
 Permissions are enforced with `canView`, `canCreate`, `canEdit`, and `canDelete`.
+
+## Rate Limiting
+
+Silverstripe Framework ships with `SilverStripe\Control\Middleware\RateLimitMiddleware`.
+Apply it to sensitive endpoints (login, register, forgot-password, refresh) in your host app's
+`_config/middleware.yml`:
+
+```yml
+SilverStripe\Control\Director:
+  middlewares:
+    AuthRateLimit: '%$SilverStripe\Control\Middleware\RateLimitMiddleware'
+
+SilverStripe\Control\Middleware\RateLimitMiddleware:
+  max_attempts: 10
+  decay_seconds: 60
+  urls:
+    - 'api/v1/auth/login'
+    - 'api/v1/auth/register'
+    - 'api/v1/auth/refresh'
+    - 'api/v1/auth/forgot-password'
+```
+
+Adjust `max_attempts` and `decay_seconds` to suit your threat model.
+
 
 ## Auth Endpoints
 

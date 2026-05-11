@@ -199,13 +199,30 @@ class CrudApiController extends ApiController
     }
 
     /**
+     * Fields that may be written via POST / PUT / PATCH.
+     * Falls back to {@see getApiFields} when `api_write_fields` is not configured.
+     *
+     * @param class-string<DataObject> $className
+     * @return array<int, string>
+     */
+    protected function getApiWriteFields(string $className): array
+    {
+        $configured = Config::inst()->get($className, 'api_write_fields');
+        if (is_array($configured) && $configured !== []) {
+            return array_values(array_filter($configured, 'is_string'));
+        }
+
+        return $this->getApiFields($className);
+    }
+
+    /**
      * @param class-string<DataObject> $className
      * @param array<string, mixed> $data
      * @return array<string, mixed>
      */
     protected function extractWriteableFields(string $className, array $data): array
     {
-        $allowed = array_flip($this->getApiFields($className));
+        $allowed = array_flip($this->getApiWriteFields($className));
         $write = [];
 
         foreach ($data as $key => $value) {
