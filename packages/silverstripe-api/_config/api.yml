@@ -1,0 +1,16 @@
+---
+Name: app-api-config
+---
+SilverStripe\Control\Director:
+  middlewares:
+    AppApiCorsMiddleware: '%$App\\Api\\Middleware\\CorsMiddleware'
+
+App\Api\Services\JwtService:
+  secret: '`SS_JWT_SECRET`'
+  access_token_expiry: 900
+  refresh_token_expiry: 2592000
+  rotate_refresh_tokens: true
+
+App\Api\Middleware\CorsMiddleware:
+  allowed_origins:
+    - 'http://localhost:8081'
