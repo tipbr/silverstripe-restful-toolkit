@@ -68,6 +68,60 @@ export const LoginScreen = () => {
 };
 ```
 
+## Email Pre-validation (onBlur)
+
+`useCheckEmail` calls `POST /api/v1/auth/checkemail` and validates email format and the domain MX record server-side.
+
+```tsx
+import React from 'react';
+import { TextInput } from 'react-native';
+import { useCheckEmail } from 'react-native-silverstripe-sdk';
+
+export const EmailInput = () => {
+  const checkEmail = useCheckEmail();
+
+  return (
+    <TextInput
+      onEndEditing={(e) => checkEmail.mutate({ email: e.nativeEvent.text })}
+    />
+  );
+};
+// checkEmail.data?.valid — overall validity
+// checkEmail.data?.format_valid — email syntax only
+// checkEmail.data?.mx_valid — MX record found
+// checkEmail.data?.mx_checked — whether MX lookup was performed
+```
+
+## Password Strength (debounced)
+
+`useCheckPassword` calls `POST /api/v1/auth/checkpassword` and validates the password against the server-side policy while returning a strength score.
+
+```tsx
+import React from 'react';
+import { TextInput, Text } from 'react-native';
+import { useCheckPassword } from 'react-native-silverstripe-sdk';
+
+export const PasswordInput = () => {
+  const checkPassword = useCheckPassword();
+
+  return (
+    <>
+      <TextInput
+        secureTextEntry
+        onChangeText={(text) => checkPassword.mutate({ password: text })}
+      />
+      {checkPassword.data && (
+        <Text>Strength: {checkPassword.data.strength.label}</Text>
+      )}
+    </>
+  );
+};
+// checkPassword.data?.valid — passes server policy
+// checkPassword.data?.errors — policy violation messages
+// checkPassword.data?.strength.score — 0-4
+// checkPassword.data?.strength.label — 'weak' | 'medium' | 'strong'
+```
+
 ## ID Mapping Options
 
 The provider supports optional ID mapping for obfuscated backend IDs:
@@ -127,7 +181,7 @@ export const TodoListScreen = () => {
 ## Exports
 
 - `SilverstripeApiProvider`, `useApiConfig`
-- Auth hooks (`useLogin`, `useRegister`, `useMe`, etc.)
+- Auth hooks (`useLogin`, `useRegister`, `useCheckEmail`, `useCheckPassword`, `useMe`, etc.)
 - `createCrudHooks`
 - Full API and request/response types from `types.ts`
 - `TokenStorage` interface

@@ -3,6 +3,8 @@ export { createCrudHooks } from './src/hooks/crud/createCrudHooks';
 
 export { useLogin } from './src/hooks/auth/useLogin';
 export { useRegister } from './src/hooks/auth/useRegister';
+export { useCheckEmail } from './src/hooks/auth/useCheckEmail';
+export { useCheckPassword } from './src/hooks/auth/useCheckPassword';
 export { useLogout } from './src/hooks/auth/useLogout';
 export { useLogoutAll } from './src/hooks/auth/useLogoutAll';
 export { useRefreshToken } from './src/hooks/auth/useRefreshToken';

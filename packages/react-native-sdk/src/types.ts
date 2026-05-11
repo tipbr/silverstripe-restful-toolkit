@@ -78,6 +78,34 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface CheckEmailRequest {
+  email: string;
+}
+
+export interface CheckEmailResponse {
+  email: string;
+  format_valid: boolean;
+  mx_valid: boolean;
+  mx_check_available: boolean;
+  mx_checked: boolean;
+  valid: boolean;
+}
+
+export interface PasswordStrength {
+  score: number;
+  label: 'weak' | 'medium' | 'strong';
+}
+
+export interface CheckPasswordRequest {
+  password: string;
+}
+
+export interface CheckPasswordResponse {
+  valid: boolean;
+  errors: string[];
+  strength: PasswordStrength;
+}
+
 export type LoginResponse = AuthTokens;
 export type RegisterResponse = AuthTokens;
 export type RefreshResponse = Partial<AuthTokens> & Pick<AuthTokens, 'access_token'>;
