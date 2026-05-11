@@ -16,9 +16,9 @@ export const useRegister = (
       return response.data;
     },
     ...options,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       await setAuthTokens(tokenStorage, data);
-      await options?.onSuccess?.(data, variables, context);
+      await options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 };

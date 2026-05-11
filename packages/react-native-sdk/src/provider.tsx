@@ -25,7 +25,7 @@ export const SilverstripeApiProvider = ({
   tokenStorage,
   onAuthFailure,
   children,
-}: SilverstripeApiProviderProps): JSX.Element => {
+}: SilverstripeApiProviderProps): React.ReactElement => {
   const [client] = useState<QueryClient>(() => queryClient ?? new QueryClient());
   const storage = useMemo<TokenStorage>(() => tokenStorage ?? createDefaultTokenStorage(), [tokenStorage]);
 
