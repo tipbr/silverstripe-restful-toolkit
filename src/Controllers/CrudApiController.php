@@ -9,7 +9,6 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Member;
 
@@ -59,16 +58,37 @@ class CrudApiController extends ApiController
 
     protected function index(string $className): HTTPResponse
     {
-        /** @var DataList<DataObject> $list */
+        /** @var \SilverStripe\ORM\DataList<DataObject> $list */
         $list = $className::get();
+        $member = $this->getRequestMember();
 
-        $paginated = $this->getPaginatedList($list);
-        $paginated['data'] = array_map(
-            fn (DataObject $record): array => $this->serializeRecord($record),
-            $paginated['data']
-        );
+        $request = $this->getRequest();
+        $page = max(1, (int)($request->getVar('page') ?? 1));
+        $maxPageSize = max(1, (int)self::config()->get('max_page_size'));
+        $perPage = min($maxPageSize, max(1, (int)($request->getVar('per_page') ?? 20)));
+        $offset = ($page - 1) * $perPage;
+        $visibleTotal = 0;
+        $data = [];
+        foreach ($list as $record) {
+            if (!$record->canView($member)) {
+                continue;
+            }
 
-        return $this->apiResponse($paginated);
+            if ($visibleTotal >= $offset && count($data) < $perPage) {
+                $data[] = $this->serializeRecord($record);
+            }
+            $visibleTotal++;
+        }
+
+        return $this->apiResponse([
+            'data' => $data,
+            'meta' => [
+                'total' => $visibleTotal,
+                'page' => $page,
+                'per_page' => $perPage,
+                'last_page' => (int)max(1, ceil($visibleTotal / $perPage)),
+            ],
+        ]);
     }
 
     protected function show(string $className, int $id): HTTPResponse
