@@ -4,7 +4,7 @@
   "type": "silverstripe-vendormodule",
   "license": "MIT",
   "require": {
-    "php": "^8.2",
+    "php": "^8.3",
     "silverstripe/framework": "^6",
     "silverstripe/security": "^6",
     "firebase/php-jwt": "^6.10",
