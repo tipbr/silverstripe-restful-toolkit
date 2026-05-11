@@ -1,6 +1,7 @@
 import type { Identifier } from './types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_COLLISION_RETRIES = 20;
 
 export interface IdMappingConfig {
   enabled?: boolean;
@@ -108,7 +109,7 @@ export class IdMapper {
   private createShortId(uuid: string): string {
     let attempt = 0;
 
-    while (attempt < 20) {
+    while (attempt < MAX_COLLISION_RETRIES) {
       const seed = attempt === 0 ? uuid : `${uuid}:${attempt}`;
       const candidate = fnv1a(seed).padEnd(this.shortIdLength, '0').slice(0, this.shortIdLength);
       const existing = this.shortToUuid.get(candidate);
