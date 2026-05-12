@@ -1,0 +1,33 @@
+{
+  "name": "tipbr/silverstripe-restful-toolkit",
+  "description": "Silverstripe 6 API scaffolding helpers with JWT authentication",
+  "type": "silverstripe-vendormodule",
+  "license": "MIT",
+  "require": {
+    "php": "^8.3",
+    "silverstripe/framework": "^6",
+    "firebase/php-jwt": "^7.0",
+    "ramsey/uuid": "^4.9"
+  },
+  "autoload": {
+    "psr-4": {
+      "Tipbr\\RestfulToolkit\\": "src/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true,
+      "silverstripe/vendor-plugin": true
+    },
+    "platform": {
+      "php": "8.3.31"
+    }
+  },
+  "extra": {
+    "expose": [
+      "_config"
+    ]
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

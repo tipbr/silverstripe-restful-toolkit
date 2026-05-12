@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-ci:
+    name: PHP CI (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f
+        with:
+          php-version: ${{ matrix.php-version }}
+      - run: composer validate --strict --no-check-publish
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: PHP syntax check
+        run: find src -name '*.php' -print0 | xargs -0 php -l
+      - name: Dependency audit
+        run: composer audit --no-interaction
+      - name: Run tests when available
+        run: |
+          if [ -x vendor/bin/phpunit ]; then
+            vendor/bin/phpunit --colors=never
+          else
+            echo "No PHPUnit suite configured in this package."
+          fi

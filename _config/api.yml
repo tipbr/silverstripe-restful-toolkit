@@ -1,0 +1,62 @@
+---
+Name: tipbr-restful-toolkit-config
+---
+SilverStripe\Control\Director:
+  middlewares:
+    AppApiCorsMiddleware: '%$Tipbr\\RestfulToolkit\\Middleware\\CorsMiddleware'
+
+Tipbr\RestfulToolkit\Services\JwtService:
+  # Strong signing secret (e.g. from env var)
+  secret: '`SS_JWT_SECRET`'
+  # Access token TTL in seconds
+  access_token_expiry: 900
+  # Refresh token/session TTL in seconds
+  refresh_token_expiry: 2592000
+  # When true, /auth/refresh issues a new refresh token value
+  rotate_refresh_tokens: true
+
+Tipbr\RestfulToolkit\Services\IdObfuscationService:
+  # When true, API-exposed IDs are the UUID stored on the model via ObfuscatableExtension
+  enabled: false
+
+Tipbr\RestfulToolkit\Extensions\ObfuscatableExtension:
+  # UUID version written to PublicID on first save. Supported: v1, v4, v6, v7
+  uuid_type: v4
+
+Tipbr\RestfulToolkit\Controllers\ApiController:
+  # Upper bound for per_page requests
+  max_page_size: 100
+
+Tipbr\RestfulToolkit\Controllers\AuthController:
+  # Minimum password length used by register/reset/change-password and the checkpassword fallback
+  min_password_length: 8
+
+Tipbr\RestfulToolkit\Services\SharingService:
+  # Default invitation expiration (seconds)
+  default_share_expiry: 604800
+  # When true, members who declined an invite cannot be reinvited for that same object
+  block_reinvite_after_decline: true
+  # Allow inviting yourself
+  allow_self_invite: false
+  # Allowed permission values for shares
+  allowed_permissions:
+    - read
+    - write
+  # Permission used when client doesn't send one
+  default_permission: read
+  # Optional explicit resource map for sharing endpoints
+  resources: []
+  # Fallback namespace used when resource map is empty
+  default_resource_namespace: 'App\\Model\\'
+
+Tipbr\RestfulToolkit\Middleware\CorsMiddleware:
+  # Allowed CORS origins. Use '*' only for intentionally public APIs.
+  allowed_origins:
+    - 'http://localhost:8081'
+
+# Example shareable object configuration in your host project:
+# App\Model\Post:
+#   extensions:
+#     - Tipbr\RestfulToolkit\Extensions\ShareableObjectExtension
+#   # Optional owner field used for canManageShares checks
+#   share_owner_field: OwnerID

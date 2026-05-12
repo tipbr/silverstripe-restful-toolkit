@@ -1,0 +1,28 @@
+---
+Name: tipbr-restful-toolkit-routes
+After:
+  - '#rootroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'api/v1/auth/register': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/register'
+    'api/v1/auth/login': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/login'
+    'api/v1/auth/checkemail': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/checkEmail'
+    'api/v1/auth/checkpassword': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/checkPassword'
+    'api/v1/auth/refresh': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/refresh'
+    'api/v1/auth/logout': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/logout'
+    'api/v1/auth/logout-all': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/logoutAll'
+    'api/v1/auth/sessions/$ID': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/sessionById'
+    'api/v1/auth/sessions': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/sessions'
+    'api/v1/auth/forgot-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/forgotPassword'
+    'api/v1/auth/reset-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/resetPassword'
+    'api/v1/auth/change-password': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/changePassword'
+    'api/v1/auth/profile': 'Tipbr\\RestfulToolkit\\Controllers\\AuthController/profile'
+    'api/v1/shares/invite': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/invite'
+    'api/v1/shares/mine': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/mine'
+    'api/v1/shares/object': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/objectShares'
+    'api/v1/shares/$ID/accept': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/accept'
+    'api/v1/shares/$ID/decline': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/decline'
+    'api/v1/shares/$ID': 'Tipbr\\RestfulToolkit\\Controllers\\SharingController/revoke'
+    'api/v1/$Resource/$ID': 'Tipbr\\RestfulToolkit\\Controllers\\CrudApiController/handle'
+    'api/v1/$Resource': 'Tipbr\\RestfulToolkit\\Controllers\\CrudApiController/handle'
