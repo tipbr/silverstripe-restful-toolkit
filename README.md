@@ -33,6 +33,8 @@ App\Api\Services\JwtService:
 
 App\Api\Services\IdObfuscationService:
   enabled: false
+
+App\Api\Extensions\ObfuscatableExtension:
   uuid_type: v4
 
 App\Api\Controllers\ApiController:
@@ -74,7 +76,27 @@ If `allowed_origins` is omitted or empty, CORS headers are not added (all cross-
 ## CRUD Scaffolding
 
 Expose resources under `/api/v1/{resource}` and `/api/v1/{resource}/{id}`.
-When `App\Api\Services\IdObfuscationService.enabled` is true, API IDs are UUIDs (configured by `uuid_type`) instead of incremental DB integers.
+When `Tipbr\RestfulToolkit\Services\IdObfuscationService.enabled` is true, API IDs are the UUID stored directly on each model via `ObfuscatableExtension` rather than incremental DB integers.
+
+To enable obfuscation for a model, apply the extension and enable the service:
+
+```yml
+Tipbr\RestfulToolkit\Services\IdObfuscationService:
+  enabled: true
+
+App\Model\Post:
+  extensions:
+    - Tipbr\RestfulToolkit\Extensions\ObfuscatableExtension
+```
+
+Run `dev/build` after applying the extension so that the `PublicID` column and its unique index are added to the model's table. A UUID is generated automatically on first save.
+
+The UUID version can be configured globally:
+
+```yml
+Tipbr\RestfulToolkit\Extensions\ObfuscatableExtension:
+  uuid_type: v7  # v1 | v4 | v6 | v7  (default: v4)
+```
 
 By default, the CRUD controller resolves resource names to `App\Model\{StudlyCaseResource}` and only serializes:
 

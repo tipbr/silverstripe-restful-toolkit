@@ -16,9 +16,11 @@ Tipbr\RestfulToolkit\Services\JwtService:
   rotate_refresh_tokens: true
 
 Tipbr\RestfulToolkit\Services\IdObfuscationService:
-  # When true, API-exposed IDs are UUIDs mapped from internal incremental IDs
+  # When true, API-exposed IDs are the UUID stored on the model via ObfuscatableExtension
   enabled: false
-  # Supported: v1, v4, v6, v7
+
+Tipbr\RestfulToolkit\Extensions\ObfuscatableExtension:
+  # UUID version written to PublicID on first save. Supported: v1, v4, v6, v7
   uuid_type: v4
 
 Tipbr\RestfulToolkit\Controllers\ApiController:

@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace Tipbr\RestfulToolkit\Services;
 
-use Tipbr\RestfulToolkit\Models\ApiPublicId;
+use Tipbr\RestfulToolkit\Extensions\ObfuscatableExtension;
 use Ramsey\Uuid\Uuid;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\ORM\DataObject;
-use RuntimeException;
 
 class IdObfuscationService
 {
     use Configurable;
 
     private static bool $enabled = false;
-    private static string $uuid_type = 'v4';
 
     /**
      * @return int|string
      */
     public function encodeForObject(DataObject $object): int|string
     {
-        return $this->encode($object::class, (int)$object->ID);
+        if (!$this->isEnabled() || !$object->hasExtension(ObfuscatableExtension::class)) {
+            return (int)$object->ID;
+        }
+
+        return (string)$object->PublicID;
     }
 
     /**
@@ -35,23 +37,13 @@ class IdObfuscationService
             return $id;
         }
 
-        /** @var ApiPublicId|null $mapping */
-        $mapping = ApiPublicId::get()
-            ->filter('ObjectClass', $className)
-            ->filter('ObjectID', $id)
-            ->first();
-
-        if ($mapping) {
-            return (string)$mapping->PublicID;
+        /** @var DataObject|null $record */
+        $record = $className::get()->byID($id);
+        if (!$record || !$record->hasExtension(ObfuscatableExtension::class)) {
+            return $id;
         }
 
-        $mapping = ApiPublicId::create();
-        $mapping->ObjectClass = $className;
-        $mapping->ObjectID = $id;
-        $mapping->PublicID = $this->generateUniquePublicId();
-        $mapping->write();
-
-        return (string)$mapping->PublicID;
+        return (string)$record->PublicID;
     }
 
     /**
@@ -81,49 +73,17 @@ class IdObfuscationService
             return null;
         }
 
-        /** @var ApiPublicId|null $mapping */
-        $mapping = ApiPublicId::get()
-            ->filter('ObjectClass', $className)
-            ->filter('PublicID', $publicId)
-            ->first();
-
-        if (!$mapping) {
+        /** @var DataObject|null $record */
+        $record = $className::get()->filter('PublicID', $publicId)->first();
+        if (!$record) {
             return null;
         }
 
-        return (int)$mapping->ObjectID;
+        return (int)$record->ID;
     }
 
     public function isEnabled(): bool
     {
         return (bool)self::config()->get('enabled');
-    }
-
-    private function generateUniquePublicId(): string
-    {
-        for ($i = 0; $i < 10; $i++) {
-            $candidate = $this->generateUuid();
-            if (!ApiPublicId::get()->filter('PublicID', $candidate)->exists()) {
-                return $candidate;
-            }
-        }
-
-        throw new RuntimeException('Failed to generate unique public ID.');
-    }
-
-    private function generateUuid(): string
-    {
-        $type = strtolower((string)self::config()->get('uuid_type'));
-
-        return match ($type) {
-            'v1' => Uuid::uuid1()->toString(),
-            'v6' => Uuid::uuid6()->toString(),
-            'v7' => Uuid::uuid7()->toString(),
-            'v4' => Uuid::uuid4()->toString(),
-            default => throw new RuntimeException(sprintf(
-                'Unsupported UUID type "%s". Use one of: v1, v4, v6, v7.',
-                $type
-            )),
-        };
     }
 }
