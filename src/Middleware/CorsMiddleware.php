@@ -7,6 +7,7 @@ namespace Tipbr\RestfulToolkit\Middleware;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\Middleware\HTTPMiddleware;
+use SilverStripe\Core\Config\Config;
 
 class CorsMiddleware implements HTTPMiddleware
 {
@@ -29,7 +30,7 @@ class CorsMiddleware implements HTTPMiddleware
     private function applyCorsHeaders(HTTPRequest $request, HTTPResponse $response): HTTPResponse
     {
         $origin = (string)$request->getHeader('Origin');
-        $allowedOrigins = self::config()->get('allowed_origins') ?? [];
+        $allowedOrigins = Config::inst()->get(self::class, 'allowed_origins') ?? [];
 
         if (in_array('*', $allowedOrigins, true)) {
             $response->addHeader('Access-Control-Allow-Origin', '*');

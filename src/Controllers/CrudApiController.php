@@ -24,7 +24,7 @@ class CrudApiController extends ApiController
     private static string $default_resource_namespace = 'App\\Model\\';
     private IdObfuscationService $idObfuscation;
 
-    protected function init(): void
+    protected function init()
     {
         parent::init();
         $this->idObfuscation = Injector::inst()->get(IdObfuscationService::class);
@@ -49,7 +49,7 @@ class CrudApiController extends ApiController
 
         return match ($method) {
             'GET' => $resolvedId !== null ? $this->show($className, $resolvedId) : $this->index($className),
-            'POST' => $this->create($className),
+            'POST' => $this->createRecord($className),
             'PUT', 'PATCH' => $resolvedId !== null ? $this->update($className, $resolvedId) : $this->apiError('Resource ID is required', 400),
             'DELETE' => $resolvedId !== null ? $this->destroy($className, $resolvedId) : $this->apiError('Resource ID is required', 400),
             default => $this->apiError('Method not allowed', 405),
@@ -106,7 +106,7 @@ class CrudApiController extends ApiController
         return $this->apiResponse(['data' => $this->serializeRecord($record)]);
     }
 
-    protected function create(string $className): HTTPResponse
+    protected function createRecord(string $className): HTTPResponse
     {
         /** @var DataObject $record */
         $record = $className::create();
