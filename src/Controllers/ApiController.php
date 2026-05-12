@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tipbr\RestfulToolkit\Controllers;
 
 use SilverStripe\Control\Controller;
-use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
+use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Model\List\PaginatedList;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\PaginatedList;
 
 class ApiController extends Controller
 {

@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace Tipbr\RestfulToolkit\Controllers;
 
-use Tipbr\RestfulToolkit\Models\ApiSession;
-use Tipbr\RestfulToolkit\Services\IdObfuscationService;
-use Tipbr\RestfulToolkit\Services\JwtService;
-use Tipbr\RestfulToolkit\Traits\RequiresJwtAuth;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\ORM\DB;
-use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
-use SilverStripe\Security\PasswordValidator;
+use SilverStripe\Security\Validation\PasswordValidator;
+use Tipbr\RestfulToolkit\Controllers\ApiController;
+use Tipbr\RestfulToolkit\Models\ApiSession;
+use Tipbr\RestfulToolkit\Services\IdObfuscationService;
+use Tipbr\RestfulToolkit\Services\JwtService;
+use Tipbr\RestfulToolkit\Traits\RequiresJwtAuth;
 
 class AuthController extends ApiController
 {
@@ -36,13 +37,13 @@ class AuthController extends ApiController
         'forgotPassword',
         'resetPassword',
         'changePassword',
-        'me',
+        'profile',
     ];
 
     private JwtService $jwtService;
     private IdObfuscationService $idObfuscation;
 
-    protected function init(): void
+    protected function init()
     {
         parent::init();
         $this->jwtService = Injector::inst()->get(JwtService::class);
@@ -67,7 +68,7 @@ class AuthController extends ApiController
         $member->Email = $email;
         $member->FirstName = trim((string)$data['first_name']);
         $member->Surname = trim((string)$data['last_name']);
-        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password']);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password'], $member);
         if (!$passwordValidation->isValid()) {
             return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
@@ -322,7 +323,7 @@ class AuthController extends ApiController
             return $this->apiError('Invalid reset token', 400);
         }
 
-        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password']);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['password'], $member);
         if (!$passwordValidation->isValid()) {
             return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
@@ -348,7 +349,7 @@ class AuthController extends ApiController
             return $this->apiError('Current password is incorrect', 400);
         }
 
-        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['new_password']);
+        $passwordValidation = $this->validatePasswordAgainstPolicy((string)$data['new_password'], $member);
         if (!$passwordValidation->isValid()) {
             return $this->apiError($this->getPrimaryValidationMessage($passwordValidation), 400);
         }
@@ -358,7 +359,7 @@ class AuthController extends ApiController
         return $this->apiSuccess('Password changed');
     }
 
-    public function me(HTTPRequest $request): HTTPResponse
+    public function profile(HTTPRequest $request): HTTPResponse
     {
         $member = $this->requireAuth();
         $method = strtoupper($request->httpMethod());
@@ -406,7 +407,7 @@ class AuthController extends ApiController
         return mb_strlen($password) >= $this->getMinPasswordLength();
     }
 
-    private function validatePasswordAgainstPolicy(string $password): ValidationResult
+    private function validatePasswordAgainstPolicy(string $password, ?Member $member = null): ValidationResult
     {
         $validator = null;
 
@@ -429,7 +430,7 @@ class AuthController extends ApiController
         }
 
         if ($validator) {
-            return $validator->validate($password, null);
+            return $validator->validate($password, $member ?? Member::create());
         }
 
         $fallback = ValidationResult::create();

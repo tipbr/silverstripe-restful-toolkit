@@ -153,8 +153,8 @@ All endpoints are under `/api/v1/auth/`.
 - `POST /forgot-password` — send a password-reset email (`email`)
 - `POST /reset-password` — set a new password via reset token (`token`, `email`, `password`)
 - `POST /change-password` — change password for the authenticated member (`current_password`, `new_password`)
-- `GET /me` — return the authenticated member's profile
-- `PUT /me` — update the authenticated member's profile (`first_name`, `last_name`)
+- `GET /profile` — return the authenticated member's profile
+- `PUT /profile` — update the authenticated member's profile (`first_name`, `last_name`)
 
 ### `POST /checkemail` response
 

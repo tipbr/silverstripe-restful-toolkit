@@ -34,7 +34,7 @@ class JwtAuthMiddleware implements HTTPMiddleware
             return $this->unauthorizedResponse('Authenticated member not found');
         }
 
-        $routeParams = $request->getRouteParams();
+        $routeParams = $request->routeParams();
         $routeParams['member'] = $member;
         $routeParams['jwt_claims'] = $claims;
         $request->setRouteParams($routeParams);

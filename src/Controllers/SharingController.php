@@ -32,7 +32,7 @@ class SharingController extends ApiController
     private SharingService $sharingService;
     private IdObfuscationService $idObfuscation;
 
-    protected function init(): void
+    protected function init()
     {
         parent::init();
         $this->sharingService = Injector::inst()->get(SharingService::class);
