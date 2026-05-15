@@ -1,0 +1,59 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create next patch version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_tag="$(git tag --sort=-v:refname | head -n 1)"
+
+          if [[ -z "${latest_tag}" ]]; then
+            next_tag="0.1.0"
+          else
+            base_tag="${latest_tag#v}"
+            IFS='.' read -r major minor patch <<< "${base_tag}"
+
+            if [[ -z "${major:-}" || -z "${minor:-}" || -z "${patch:-}" ]]; then
+              echo "Latest tag '${latest_tag}' is not semver (x.y.z)." >&2
+              exit 1
+            fi
+
+            next_patch=$((patch + 1))
+            next_tag="${major}.${minor}.${next_patch}"
+          fi
+
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Git tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${TAG}"
+          git push origin "${TAG}"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
